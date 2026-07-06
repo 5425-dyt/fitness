@@ -1,0 +1,299 @@
+/* ===== 虚拟伙伴 ===== */
+
+.duo-stage {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.duo-pane {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: #0a0e14;
+}
+
+.duo-pane--partner {
+  background: linear-gradient(180deg, #1a2840 0%, #0f1828 60%, #1a2332 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 12px;
+}
+
+.duo-pane__label {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 3;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--text-muted);
+  backdrop-filter: blur(4px);
+}
+
+.duo-pane__label--partner {
+  color: var(--accent);
+  border: 1px solid rgba(61, 217, 196, 0.3);
+}
+
+#avatar-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 8px;
+}
+
+.duo-partner-info {
+  text-align: center;
+  padding: 0 12px 4px;
+  z-index: 2;
+}
+
+.duo-partner-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.duo-pose-label {
+  font-size: 0.75rem;
+  color: var(--accent);
+  margin-top: 2px;
+}
+
+/* Avatar SVG */
+.avatar {
+  width: min(85%, 180px);
+  height: auto;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.35));
+}
+
+.avatar-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.avatar-root {
+  transform-origin: 60px 200px;
+}
+
+/* 肢体旋转原点 */
+.leg-left { transform-origin: 46px 168px; }
+.leg-right { transform-origin: 74px 168px; }
+.arm-left { transform-origin: 25px 112px; }
+.arm-right { transform-origin: 95px 112px; }
+
+/* 共跳动画 */
+@keyframes avatar-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+
+@keyframes leg-jump-l {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-12deg); }
+}
+
+@keyframes leg-jump-r {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(12deg); }
+}
+
+@keyframes arm-jump-l {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-55deg); }
+}
+
+@keyframes arm-jump-r {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(55deg); }
+}
+
+@keyframes avatar-squat {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(10px) scaleY(0.92); }
+}
+
+@keyframes leg-squat {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(18deg); }
+}
+
+@keyframes arm-stretch {
+  0%, 100% { transform: rotate(-30deg); }
+  50% { transform: rotate(-75deg); }
+}
+
+@keyframes arm-stretch-r {
+  0%, 100% { transform: rotate(30deg); }
+  50% { transform: rotate(75deg); }
+}
+
+@keyframes avatar-run {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-6px); }
+  75% { transform: translateY(-3px); }
+}
+
+@keyframes leg-run-l {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(20deg); }
+}
+
+@keyframes leg-run-r {
+  0%, 100% { transform: rotate(20deg); }
+  50% { transform: rotate(-8deg); }
+}
+
+@keyframes arm-run-l {
+  0%, 100% { transform: rotate(25deg); }
+  50% { transform: rotate(-20deg); }
+}
+
+@keyframes arm-run-r {
+  0%, 100% { transform: rotate(-25deg); }
+  50% { transform: rotate(20deg); }
+}
+
+@keyframes avatar-plank {
+  0%, 100% { transform: translateY(4px) rotate(-2deg); }
+  50% { transform: translateY(0) rotate(2deg); }
+}
+
+@keyframes avatar-idle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.avatar--pose-jump .avatar-root {
+  animation: avatar-bounce 0.5s ease-in-out infinite;
+}
+.avatar--pose-jump .leg-left { animation: leg-jump-l 0.5s ease-in-out infinite; }
+.avatar--pose-jump .leg-right { animation: leg-jump-r 0.5s ease-in-out infinite; }
+.avatar--pose-jump .arm-left { animation: arm-jump-l 0.5s ease-in-out infinite; }
+.avatar--pose-jump .arm-right { animation: arm-jump-r 0.5s ease-in-out infinite; }
+
+.avatar--pose-squat .avatar-root {
+  animation: avatar-squat 1s ease-in-out infinite;
+}
+.avatar--pose-squat .leg-left,
+.avatar--pose-squat .leg-right { animation: leg-squat 1s ease-in-out infinite; }
+
+.avatar--pose-stretch .avatar-root {
+  animation: avatar-idle 2s ease-in-out infinite;
+}
+.avatar--pose-stretch .arm-left { animation: arm-stretch 2s ease-in-out infinite; }
+.avatar--pose-stretch .arm-right { animation: arm-stretch-r 2s ease-in-out infinite; }
+
+.avatar--pose-run .avatar-root {
+  animation: avatar-run 0.35s ease-in-out infinite;
+}
+.avatar--pose-run .leg-left { animation: leg-run-l 0.35s ease-in-out infinite; }
+.avatar--pose-run .leg-right { animation: leg-run-r 0.35s ease-in-out infinite; }
+.avatar--pose-run .arm-left { animation: arm-run-l 0.35s ease-in-out infinite; }
+.avatar--pose-run .arm-right { animation: arm-run-r 0.35s ease-in-out infinite; }
+
+.avatar--pose-plank .avatar-root {
+  animation: avatar-plank 1.2s ease-in-out infinite;
+}
+
+.avatar--pose-idle .avatar-root {
+  animation: avatar-idle 2.5s ease-in-out infinite;
+}
+
+/* 外观自定义 */
+.avatar-custom {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.avatar-preview-box {
+  position: relative;
+  background: linear-gradient(180deg, #2a2048 0%, #1a2838 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  height: 260px;
+  max-height: 260px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatar-preview-box .skeleton-canvas,
+#avatar-preview .skeleton-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.avatar-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+.avatar-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.avatar-field input,
+.avatar-field select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
+.avatar-field input[type="color"] {
+  height: 36px;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.avatar-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .duo-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .duo-pane {
+    aspect-ratio: 4 / 3;
+  }
+
+  .avatar-custom {
+    grid-template-columns: 1fr;
+  }
+
+  .avatar-preview-box {
+    height: 220px;
+    max-height: 220px;
+  }
+}

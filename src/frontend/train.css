@@ -1,0 +1,373 @@
+/* 全屏沉浸训练 */
+.train-immersive {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #080c12;
+  display: flex;
+  flex-direction: column;
+}
+
+.train-immersive.hidden {
+  display: none;
+}
+
+.train-immersive__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  background: rgba(15, 20, 28, 0.95);
+  border-bottom: 1px solid #2d3a4f;
+  flex-shrink: 0;
+}
+
+.train-immersive__title {
+  flex: 1;
+  text-align: center;
+}
+
+.train-immersive__title h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.train-immersive__title p {
+  font-size: 0.75rem;
+  color: #8b9cb3;
+  margin-top: 2px;
+}
+
+.train-immersive__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.train-immersive__body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  min-height: 0;
+}
+
+.train-visual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  background: #0a0e14;
+  min-height: 0;
+}
+
+.train-visual__pane {
+  position: relative;
+  background: #0a0e14;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.train-visual__label {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+.train-visual__label--partner {
+  color: #3dd9c4;
+  border: 1px solid rgba(61, 217, 196, 0.35);
+}
+
+.train-visual__viewport {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.train-visual__viewport video,
+.train-visual__viewport canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#camera-video {
+  transform: scaleX(-1);
+}
+
+#camera-overlay,
+#camera-pose-canvas {
+  pointer-events: none;
+}
+
+.train-visual__partner-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #2a2048 0%, #1a2838 45%, #243850 100%);
+}
+
+#avatar-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+#avatar-stage .skeleton-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.skeleton-canvas {
+  display: block;
+}
+
+.train-visual__footer {
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.4);
+  font-size: 0.8rem;
+  color: #8b9cb3;
+  border-top: 1px solid #1e2a3a;
+}
+
+.train-visual__footer strong {
+  color: #3dd9c4;
+}
+
+/* 右侧边栏 */
+.train-sidebar {
+  background: #121a26;
+  border-left: 1px solid #2d3a4f;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sidebar-tabs {
+  display: flex;
+  border-bottom: 1px solid #2d3a4f;
+  flex-shrink: 0;
+}
+
+.sidebar-tab {
+  flex: 1;
+  padding: 12px 8px;
+  background: none;
+  border: none;
+  color: #8b9cb3;
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.sidebar-tab--active {
+  color: #3dd9c4;
+  border-bottom-color: #3dd9c4;
+}
+
+.sidebar-panel {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  min-height: 0;
+}
+
+.sidebar-panel--active {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sidebar-card {
+  background: #1a2332;
+  border: 1px solid #2d3a4f;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.sidebar-card h4 {
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+  color: #e8edf4;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stat-mini {
+  background: #243044;
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+
+.stat-mini__val {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #3dd9c4;
+}
+
+.stat-mini__lbl {
+  font-size: 0.65rem;
+  color: #8b9cb3;
+}
+
+/* 语音 */
+.voice-btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px dashed #3d5a80;
+  background: #1a2838;
+  color: #e8edf4;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.voice-btn--active {
+  border-color: #ff6b4a;
+  background: rgba(255, 107, 74, 0.15);
+  color: #ff6b4a;
+}
+
+.voice-log {
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.voice-log__item {
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.voice-log__item--user {
+  background: #ff6b4a;
+  color: #fff;
+  align-self: flex-end;
+  max-width: 90%;
+}
+
+.voice-log__item--ai {
+  background: #243044;
+  align-self: flex-start;
+  max-width: 90%;
+}
+
+.agent-endpoint-input {
+  width: 100%;
+  background: #243044;
+  border: 1px solid #2d3a4f;
+  color: #e8edf4;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-family: inherit;
+}
+
+/* 视频教学 */
+.video-upload-zone {
+  border: 2px dashed #2d3a4f;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.video-upload-zone:hover {
+  border-color: #3dd9c4;
+}
+
+.video-upload-zone input {
+  display: none;
+}
+
+.teach-progress {
+  height: 6px;
+  background: #243044;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.teach-progress__fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #3dd9c4, #ff6b4a);
+  transition: width 0.3s;
+}
+
+.teach-segments {
+  list-style: none;
+  font-size: 0.75rem;
+  color: #8b9cb3;
+}
+
+.teach-segments li {
+  padding: 6px 0;
+  border-bottom: 1px solid #2d3a4f;
+}
+
+.train-launcher {
+  text-align: center;
+  padding: 48px 24px;
+  background: linear-gradient(160deg, #1a2332, #121a26);
+  border: 1px solid #2d3a4f;
+  border-radius: 16px;
+}
+
+.train-launcher h3 {
+  font-size: 1.3rem;
+  margin-bottom: 8px;
+}
+
+.train-launcher p {
+  color: #8b9cb3;
+  margin-bottom: 24px;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 960px) {
+  .train-immersive__body {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+  }
+
+  .train-visual {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+
+  .train-sidebar {
+    max-height: 42vh;
+    border-left: none;
+    border-top: 1px solid #2d3a4f;
+  }
+}
