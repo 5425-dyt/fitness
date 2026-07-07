@@ -18,6 +18,7 @@ const Avatar = (() => {
 
   let config = { ...DEFAULT };
   let currentPose = "idle";
+  let photoUrl = "";
 
   const POSE_LABELS = {
     idle: "待机蹦跶",
@@ -83,10 +84,27 @@ const Avatar = (() => {
   function setLandmarks(lm) {
     if (lm) {
       SkeletonAvatar.setLandmarks(lm);
+      const label = document.getElementById("duo-pose-label");
+      if (label && photoUrl) label.textContent = "照片形象跟练";
     } else {
       SkeletonAvatar.clearLandmarks();
       SkeletonAvatar.setPresetPose(currentPose);
     }
+  }
+
+  function setPhoto(url) {
+    photoUrl = url || "";
+    document.getElementById("avatar-stage")?.querySelector(".avatar-2d-anim")?.remove();
+    document.getElementById("avatar-preview")?.querySelector(".avatar-2d-anim")?.remove();
+    SkeletonAvatar.setPhoto(photoUrl);
+    const label = document.getElementById("duo-pose-label");
+    if (label && photoUrl) label.textContent = "照片形象待命";
+  }
+
+  function clearPhoto() {
+    photoUrl = "";
+    SkeletonAvatar.clearPhoto();
+    setPose(currentPose);
   }
 
   function getPoseFromExercise(name) {
@@ -159,16 +177,39 @@ const Avatar = (() => {
     setPose("idle");
   }
 
+  // 支持加载 2D 动画（后端生成的视频或 gif），在 avatar-stage 小角落播放
+  function play2DAnimation(url) {
+    const stage = document.getElementById("avatar-stage");
+    if (!stage) return;
+    // 移除旧的动画
+    const old = stage.querySelector('.avatar-2d-anim');
+    if (old) old.remove();
+
+    const el = document.createElement('video');
+    el.className = 'avatar-2d-anim';
+    el.src = url;
+    el.autoplay = true;
+    el.loop = true;
+    el.muted = true;
+    el.style.width = '100%';
+    el.style.height = '100%';
+    el.style.objectFit = 'cover';
+    stage.appendChild(el);
+  }
+
   return {
     init,
     mount,
     setPose,
     setLandmarks,
+    setPhoto,
+    clearPhoto,
     setConfig,
     getConfig: () => ({ ...config }),
     getName: () => config.name,
     getAnimalLabel: () => ANIMAL_NAMES[config.animal] || "小伙伴",
     getPoseFromExercise,
     getCurrentPose: () => currentPose,
+    play2DAnimation,
   };
 })();

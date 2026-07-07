@@ -170,6 +170,41 @@ const VoiceAgent = (() => {
     bindUI();
   }
 
+  // 上传照片并调用后端生成 2D 动画占位方法
+  async function uploadPhoto(file, poseSequence = []) {
+    if (!file) return { ok: false, error: "no file" };
+
+    const endpoints = location.protocol === "file:"
+      ? ["http://localhost:8766/animate"]
+      : ["/animate", "http://localhost:8766/animate"];
+
+    let lastError = "";
+    for (const endpoint of endpoints) {
+      try {
+        const body = new FormData();
+        body.append("file", file, file.name);
+        body.append("pose_sequence", JSON.stringify(poseSequence));
+        const res = await fetch(endpoint, { method: "POST", body });
+        if (!res.ok) {
+          lastError = res.statusText || `HTTP ${res.status}`;
+          continue;
+        }
+        const data = await res.json();
+        if (data.preview_url?.startsWith("/") && endpoint.startsWith("http")) {
+          data.preview_url = new URL(data.preview_url, endpoint).href;
+        }
+        if (data.animation_url?.startsWith("/") && endpoint.startsWith("http")) {
+          data.animation_url = new URL(data.animation_url, endpoint).href;
+        }
+        return { ok: true, data };
+      } catch (err) {
+        lastError = err.message;
+      }
+    }
+
+    return { ok: false, error: lastError || "上传接口不可用" };
+  }
+
   return {
     init,
     speak,
@@ -177,6 +212,7 @@ const VoiceAgent = (() => {
     appendLog,
     getEndpoint,
     setEndpoint,
+    uploadPhoto,
     isListening: () => listening,
   };
 })();

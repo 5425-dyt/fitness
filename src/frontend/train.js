@@ -5,9 +5,11 @@ const TrainMode = (() => {
   let open = false;
   let poseLoopId = null;
   let teachLandmarks = null;
+  let teachVideoUrl = null;
   let matchScore = 0;
   let trainStartTime = 0;
   let timerInterval = null;
+  const poseBuffer = [];
 
   const immersive = () => document.getElementById("train-immersive");
 
@@ -44,6 +46,30 @@ const TrainMode = (() => {
     if (metaEl) metaEl.textContent = ex ? `${ex.duration} · ${ex.tip}` : "做得好！";
   }
 
+  function simplifyLandmarks(landmarks) {
+    return landmarks.map((p) => ({
+      x: Number(p.x.toFixed(5)),
+      y: Number(p.y.toFixed(5)),
+      z: Number((p.z || 0).toFixed(5)),
+      visibility: Number((p.visibility ?? 1).toFixed(3)),
+    }));
+  }
+
+  function recordPoseFrame(landmarks) {
+    if (!landmarks) return;
+    poseBuffer.push({
+      t: Date.now(),
+      landmarks: simplifyLandmarks(landmarks),
+    });
+    while (poseBuffer.length > 90) poseBuffer.shift();
+  }
+
+  function getMotionSequence() {
+    if (poseBuffer.length) return [...poseBuffer];
+    const last = PoseEngine.getLastLandmarks?.();
+    return last ? [{ t: Date.now(), landmarks: simplifyLandmarks(last) }] : [];
+  }
+
   async function poseLoop() {
     if (!open) return;
     const video = document.getElementById("camera-video");
@@ -62,6 +88,10 @@ const TrainMode = (() => {
 
       if (lm) {
         SkeletonAvatar.draw(ctx, lm, rect.width, rect.height, { mirror: true, wireframe: true });
+        recordPoseFrame(lm);
+        if (!PoseEngine.isTeaching()) {
+          Avatar.setLandmarks(lm);
+        }
         const target = teachLandmarks || null;
         if (target) {
           const score = PoseEngine.similarity(lm, target);
@@ -92,12 +122,41 @@ const TrainMode = (() => {
     const progressFill = document.getElementById("teach-progress-fill");
     const progressText = document.getElementById("teach-progress-text");
     const segmentsEl = document.getElementById("teach-segments");
+    const preview = document.getElementById("teach-video-preview");
+    const info = document.getElementById("teach-video-info");
 
-    zone?.addEventListener("click", () => input?.click());
+    function resetUploadState() {
+      progressFill.style.width = "0%";
+      segmentsEl.innerHTML = "";
+      if (info) info.textContent = "等待上传";
+      if (preview) {
+        preview.hidden = true;
+        if (teachVideoUrl) {
+          URL.revokeObjectURL(teachVideoUrl);
+          teachVideoUrl = null;
+        }
+        preview.src = "";
+      }
+    }
 
-    input?.addEventListener("change", async (e) => {
-      const file = e.target.files?.[0];
+    function updateUploadInfo(file) {
+      if (!info) return;
+      const seconds = file.duration ?? 0;
+      const label = seconds
+        ? `${file.name} · ${Math.round(seconds)}s` 
+        : file.name;
+      info.textContent = label;
+    }
+
+    async function handleFile(file) {
       if (!file) return;
+      resetUploadState();
+      if (preview) {
+        teachVideoUrl = URL.createObjectURL(file);
+        preview.src = teachVideoUrl;
+        preview.hidden = false;
+        preview.onloadedmetadata = () => updateUploadInfo(preview);
+      }
 
       progressText.textContent = "正在加载姿态模型…";
       await PoseEngine.init();
@@ -115,12 +174,34 @@ const TrainMode = (() => {
           .join("");
 
         progressText.textContent = `拆解完成，共 ${frames.length} 帧 · ${segments.length} 个动作段`;
-        showToast("视频动作已拆解，可开始跟练教学");
+        if (info) info.textContent += ` · ${segments.length} 段`;
+        showToast("视频动作已拆解，虚拟伙伴可开始带练");
         VoiceAgent.speak(`已学会 ${segments.length} 个动作，点击开始带练`);
       } catch (err) {
         progressText.textContent = err.message || "拆解失败";
         showToast("视频拆解失败");
       }
+    }
+
+    zone?.addEventListener("click", () => input?.click());
+    zone?.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      zone.classList.add("video-upload-zone--dragover");
+    });
+    zone?.addEventListener("dragleave", () => {
+      zone.classList.remove("video-upload-zone--dragover");
+    });
+    zone?.addEventListener("drop", (e) => {
+      e.preventDefault();
+      zone.classList.remove("video-upload-zone--dragover");
+      const file = e.dataTransfer?.files?.[0];
+      if (file) handleFile(file);
+    });
+
+    input?.addEventListener("change", async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      await handleFile(file);
     });
 
     document.getElementById("btn-teach-start")?.addEventListener("click", () => {
@@ -151,6 +232,73 @@ const TrainMode = (() => {
       teachLandmarks = null;
       Avatar.setLandmarks(null);
       progressText.textContent = "带练已停止";
+      if (info) info.textContent = "已停止带练";
+    });
+
+    resetUploadState();
+  }
+
+  function bindPhotoAnimate() {
+    const zone = document.getElementById('photo-upload-zone');
+    const input = document.getElementById('photo-file-input');
+    const preview = document.getElementById('photo-preview');
+    const status = document.getElementById('photo-status');
+    const btnGen = document.getElementById('btn-generate-animate');
+    const btnClear = document.getElementById('btn-clear-animate');
+    let lastFile = null;
+    let photoUrl = null;
+
+    zone?.addEventListener('click', () => input?.click());
+    input?.addEventListener('change', (e) => {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      lastFile = f;
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+      photoUrl = URL.createObjectURL(f);
+      if (preview) { preview.src = photoUrl; preview.hidden = false; }
+      Avatar.setPhoto(photoUrl);
+      if (status) status.textContent = '已选择照片，训练时会实时跟随你的动作';
+      showToast('照片形象已启用');
+    });
+
+    btnGen?.addEventListener('click', async () => {
+      if (!lastFile) { showToast('请先选择照片'); return; }
+      if (status) status.textContent = '正在提交后端生成任务…';
+      const res = await VoiceAgent.uploadPhoto(lastFile, getMotionSequence());
+      if (!res.ok) {
+        showToast('后端暂不可用，已使用本地 2D 跟练');
+        status.textContent = `本地 2D 跟练已启用；后端未连接：${res.error || '上传失败'}`;
+        return;
+      }
+
+      const data = res.data || {};
+      status.textContent = data.message || '已提交姿态驱动生成任务；当前继续使用本地实时预览';
+      if (data.animation_url) {
+        Avatar.play2DAnimation(data.animation_url);
+        showToast('MagicAnimate 动画已加载');
+      } else if (data.task_id) {
+        showToast('MagicAnimate 输入已提交');
+      } else if (data.preview_url) {
+        Avatar.setPhoto(data.preview_url);
+        showToast('后端已保存参考图和动作序列');
+      } else {
+        showToast('已提交后端，当前使用本地 2D 跟练');
+      }
+    });
+
+    btnClear?.addEventListener('click', () => {
+      if (preview) { preview.hidden = true; preview.src = ''; }
+      const stage = document.getElementById('avatar-stage');
+      const old = stage?.querySelector('.avatar-2d-anim');
+      if (old) old.remove();
+      if (photoUrl) {
+        URL.revokeObjectURL(photoUrl);
+        photoUrl = null;
+      }
+      Avatar.clearPhoto();
+      if (status) status.textContent = '已清除';
+      lastFile = null;
+      if (input) input.value = "";
     });
   }
 
@@ -193,6 +341,7 @@ const TrainMode = (() => {
   function init() {
     bindSidebarTabs();
     bindVideoTeaching();
+    bindPhotoAnimate();
 
     document.getElementById("btn-enter-immersive")?.addEventListener("click", enter);
     document.getElementById("btn-exit-immersive")?.addEventListener("click", exit);

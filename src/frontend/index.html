@@ -129,6 +129,20 @@
         </div>
 
         <div class="ai-chat">
+          <div class="sidebar-card">
+            <h4>上传人物照片（制作 2D 动画）</h4>
+            <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px">上传一张人物照片，后端基于 MagicAnimate/SD1.5 生成动作驱动的 2D 动画（需后端部署）。</p>
+            <label class="video-upload-zone" id="photo-upload-zone" style="cursor:pointer">
+              <input type="file" id="photo-file-input" accept="image/*" />
+              <span>📁 点击上传照片</span>
+            </label>
+            <img id="photo-preview" hidden alt="照片预览" style="width:100%;border-radius:10px;margin-top:10px;object-fit:cover;background:#111" />
+            <p id="photo-status" style="font-size:0.8rem;color:#8b9cb3;margin-top:8px">等待上传</p>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn btn--primary btn--sm" id="btn-generate-animate" type="button">生成 2D 动画</button>
+              <button class="btn btn--secondary btn--sm" id="btn-clear-animate" type="button">清除动画</button>
+            </div>
+          </div>
           <div class="ai-chat__companion">
             <div class="companion-style">
               <span>陪伴风格</span>
@@ -304,10 +318,12 @@
             <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px">AI 拆解动作后，虚拟伙伴将逐帧带练</p>
             <label class="video-upload-zone" id="video-upload-zone">
               <input type="file" id="video-file-input" accept="video/*" />
-              <span>📁 点击上传视频</span>
+              <span>📁 点击上传视频或拖拽到此处</span>
             </label>
+            <video id="teach-video-preview" hidden controls style="width:100%;border-radius:14px;margin-top:12px;background:#000"></video>
+            <p id="teach-video-info" style="font-size:0.8rem;color:#8b9cb3;margin-top:10px">等待上传</p>
             <div class="teach-progress" style="margin-top:12px"><div class="teach-progress__fill" id="teach-progress-fill"></div></div>
-            <p id="teach-progress-text" style="font-size:0.75rem;color:#8b9cb3;margin-top:8px">等待上传</p>
+            <p id="teach-progress-text" style="font-size:0.75rem;color:#8b9cb3;margin-top:8px">等待拆解</p>
             <ul class="teach-segments" id="teach-segments"></ul>
             <div style="display:flex;gap:8px;margin-top:12px">
               <button class="btn btn--primary btn--sm" id="btn-teach-start" type="button">开始带练</button>

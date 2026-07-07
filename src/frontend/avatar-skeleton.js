@@ -28,6 +28,7 @@ const SkeletonAvatar = (() => {
   const mounts = new Map();
   let currentLandmarks = null;
   let presetPose = "idle";
+  let photoAvatar = null;
   let rafId = null;
   let blinkTimer = 0;
 
@@ -162,6 +163,112 @@ const SkeletonAvatar = (() => {
       ctx.closePath();
     }
     ctx.fill();
+  }
+
+  function drawImageCover(ctx, image, x, y, w, h) {
+    const scale = Math.max(w / image.naturalWidth, h / image.naturalHeight);
+    const sw = w / scale;
+    const sh = h / scale;
+    const sx = (image.naturalWidth - sw) / 2;
+    const sy = (image.naturalHeight - sh) / 2;
+    ctx.drawImage(image, sx, sy, sw, sh, x, y, w, h);
+  }
+
+  function drawPhotoLimb(ctx, from, to, width, color, jointColor = color) {
+    if (!from || !to) return;
+    const angle = Math.atan2(to.y - from.y, to.x - from.x);
+    const len = Math.hypot(to.x - from.x, to.y - from.y);
+
+    ctx.save();
+    ctx.translate(from.x, from.y);
+    ctx.rotate(angle);
+
+    const grad = ctx.createLinearGradient(0, 0, len, 0);
+    grad.addColorStop(0, color);
+    grad.addColorStop(1, jointColor);
+    ctx.fillStyle = grad;
+    drawRoundRect(ctx, 0, -width / 2, len, width, width / 2);
+    ctx.restore();
+  }
+
+  function drawSoftJoint(ctx, p, radius, color) {
+    if (!p) return;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawPhotoCapsule(ctx, center, w, h, radius, image) {
+    ctx.save();
+    drawRoundRect(ctx, center.x - w / 2, center.y - h / 2, w, h, radius);
+    ctx.clip();
+    drawImageCover(ctx, image, center.x - w / 2, center.y - h / 2, w, h);
+    ctx.restore();
+  }
+
+  function drawPhotoPlaceholder(ctx, w, h) {
+    const sc = Math.min(w, h) / 390;
+    const cx = w * 0.5;
+    const cy = h * 0.55;
+    ctx.save();
+    ctx.globalAlpha = 0.92;
+    ctx.fillStyle = "rgba(255,255,255,0.1)";
+    drawRoundRect(ctx, cx - 44 * sc, cy - 68 * sc, 88 * sc, 130 * sc, 26 * sc);
+    ctx.fillStyle = config.accent;
+    ctx.beginPath();
+    ctx.arc(cx, cy - 116 * sc, 42 * sc, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function averageImageColor(image, sx, sy, sw, sh, fallback) {
+    const canvas = document.createElement("canvas");
+    const size = 24;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(image, sx, sy, sw, sh, 0, 0, size, size);
+    const data = ctx.getImageData(0, 0, size, size).data;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    let count = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 20) continue;
+      r += data[i];
+      g += data[i + 1];
+      b += data[i + 2];
+      count++;
+    }
+    if (!count) return fallback;
+    return `rgb(${Math.round(r / count)}, ${Math.round(g / count)}, ${Math.round(b / count)})`;
+  }
+
+  function samplePhotoPalette(image) {
+    const w = image.naturalWidth;
+    const h = image.naturalHeight;
+    return {
+      head: averageImageColor(image, w * 0.28, h * 0.08, w * 0.44, h * 0.28, config.fur),
+      torso: averageImageColor(image, w * 0.22, h * 0.3, w * 0.56, h * 0.42, config.accent),
+      lower: averageImageColor(image, w * 0.2, h * 0.62, w * 0.6, h * 0.3, "#4fa994"),
+      shade: averageImageColor(image, w * 0.1, h * 0.1, w * 0.8, h * 0.8, config.ear),
+    };
+  }
+
+  function drawTorsoPath(ctx, cx, cy, shoulderW, hipW, bodyH, radius) {
+    const top = cy - bodyH / 2;
+    const bottom = cy + bodyH / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - shoulderW / 2 + radius, top);
+    ctx.quadraticCurveTo(cx - shoulderW / 2, top, cx - shoulderW / 2, top + radius);
+    ctx.lineTo(cx - hipW / 2, bottom - radius);
+    ctx.quadraticCurveTo(cx - hipW / 2, bottom, cx - hipW / 2 + radius, bottom);
+    ctx.lineTo(cx + hipW / 2 - radius, bottom);
+    ctx.quadraticCurveTo(cx + hipW / 2, bottom, cx + hipW / 2, bottom - radius);
+    ctx.lineTo(cx + shoulderW / 2, top + radius);
+    ctx.quadraticCurveTo(cx + shoulderW / 2, top, cx + shoulderW / 2 - radius, top);
+    ctx.closePath();
   }
 
   function drawPaw(ctx, x, y, size, angle) {
@@ -415,6 +522,107 @@ const SkeletonAvatar = (() => {
     ctx.restore();
   }
 
+  function drawPhotoCharacter(ctx, w, h, lm, mirror) {
+    const img = photoAvatar?.image;
+    if (!img?.complete || !img.naturalWidth) {
+      drawPhotoPlaceholder(ctx, w, h);
+      return;
+    }
+
+    const model = lmToAnimalModel(lm, w, h, mirror);
+    const points = {};
+    for (const i of [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) {
+      points[i] = toPoint(lm, i, w, h, mirror);
+    }
+
+    const cx = model?.bodyX ?? w * 0.5;
+    const cy = model?.bodyY ?? h * 0.56;
+    const sc = (model?.scale ?? 1) * Math.min(w, h) / 390;
+    const detectedHead = points[0] || { x: cx, y: cy - 120 * sc };
+    const shoulder = points[11] && points[12]
+      ? { x: (points[11].x + points[12].x) / 2, y: (points[11].y + points[12].y) / 2 }
+      : { x: cx, y: cy - 70 * sc };
+    const hip = points[23] && points[24]
+      ? { x: (points[23].x + points[24].x) / 2, y: (points[23].y + points[24].y) / 2 }
+      : { x: cx, y: cy + 35 * sc };
+
+    const shoulderW = Math.max(72 * sc, Math.abs((points[11]?.x ?? cx - 40 * sc) - (points[12]?.x ?? cx + 40 * sc)) * 1.35);
+    const hipW = Math.max(54 * sc, Math.abs((points[23]?.x ?? cx - 30 * sc) - (points[24]?.x ?? cx + 30 * sc)) * 1.35);
+    const bodyW = Math.max(74 * sc, (shoulderW + hipW) * 0.58);
+    const bodyH = Math.max(112 * sc, Math.hypot(hip.x - shoulder.x, hip.y - shoulder.y) * 1.42);
+    const headR = Math.max(34 * sc, Math.min(58 * sc, bodyW * 0.43));
+    const limbW = Math.max(14, 20 * sc);
+    const palette = photoAvatar.palette || {};
+    const skin = palette.head || config.fur || "#f5c6a0";
+    const shade = palette.shade || config.ear || "#e8a87c";
+    const cloth = palette.torso || config.accent || "#ff6b4a";
+    const lower = palette.lower || "#4fa994";
+    const head = {
+      x: shoulder.x + (detectedHead.x - shoulder.x) * 0.55,
+      y: Math.min(
+        Math.max(detectedHead.y - headR * 0.35, shoulder.y - headR * 1.85),
+        shoulder.y - headR * 0.95
+      ),
+    };
+
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.28)";
+    ctx.shadowBlur = 18 * sc;
+    ctx.fillStyle = "rgba(0,0,0,0.15)";
+    ctx.beginPath();
+    ctx.ellipse(cx, hip.y + 70 * sc, bodyW * 0.55, 12 * sc, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    drawPhotoLimb(ctx, points[11], points[13], limbW * 1.03, cloth, skin);
+    drawPhotoLimb(ctx, points[13], points[15], limbW * 0.84, skin, shade);
+    drawPhotoLimb(ctx, points[12], points[14], limbW * 1.03, cloth, skin);
+    drawPhotoLimb(ctx, points[14], points[16], limbW * 0.84, skin, shade);
+    drawPhotoLimb(ctx, points[23], points[25], limbW * 1.18, cloth, lower);
+    drawPhotoLimb(ctx, points[25], points[27], limbW * 0.94, lower, skin);
+    drawPhotoLimb(ctx, points[24], points[26], limbW * 1.18, cloth, lower);
+    drawPhotoLimb(ctx, points[26], points[28], limbW * 0.94, lower, skin);
+
+    ctx.save();
+    ctx.translate(cx, (shoulder.y + hip.y) / 2);
+    ctx.rotate((shoulder.x - hip.x) * 0.008);
+    drawTorsoPath(ctx, 0, 0, shoulderW * 0.86, hipW * 0.78, bodyH, 22 * sc);
+    ctx.fillStyle = cloth;
+    ctx.fill();
+    ctx.clip();
+    drawImageCover(ctx, img, -bodyW / 2, -bodyH / 2, bodyW, bodyH);
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = cloth;
+    ctx.fillRect(-bodyW / 2, bodyH * 0.05, bodyW, bodyH * 0.42);
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(head.x, head.y, headR, 0, Math.PI * 2);
+    ctx.clip();
+    drawImageCover(ctx, img, head.x - headR, head.y - headR, headR * 2, headR * 2);
+    ctx.restore();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.82)";
+    ctx.lineWidth = Math.max(2, 3 * sc);
+    ctx.beginPath();
+    ctx.arc(head.x, head.y, headR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = skin;
+    [15, 16, 27, 28].forEach((i) => {
+      const p = points[i];
+      if (!p) return;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(7, 10 * sc), 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    [13, 14, 25, 26].forEach((i) => drawSoftJoint(ctx, points[i], Math.max(5, 7 * sc), "rgba(255,255,255,0.18)"));
+
+    ctx.restore();
+  }
+
   function draw(ctx, landmarks, w, h, options = {}) {
     const mirror = options.mirror ?? false;
     const wireframe = options.wireframe ?? false;
@@ -452,8 +660,12 @@ const SkeletonAvatar = (() => {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    drawCuteAnimal(ctx, w, h, lm, presetPose);
-    drawLearningOverlay(ctx, lm, w, h, mirror);
+    if (photoAvatar) {
+      drawPhotoCharacter(ctx, w, h, lm, mirror);
+    } else {
+      drawCuteAnimal(ctx, w, h, lm, presetPose);
+      drawLearningOverlay(ctx, lm, w, h, mirror);
+    }
   }
 
   function renderMount(entry) {
@@ -535,6 +747,31 @@ const SkeletonAvatar = (() => {
     config = { ...config, ...partial };
   }
 
+  function setPhoto(url) {
+    if (!url) {
+      photoAvatar = null;
+      return;
+    }
+    const image = new Image();
+    photoAvatar = { image, ready: false, url };
+    image.onload = () => {
+      if (photoAvatar?.url === url) {
+        photoAvatar.palette = samplePhotoPalette(image);
+        photoAvatar.ready = true;
+        renderAll();
+      }
+    };
+    image.onerror = () => {
+      if (photoAvatar?.url === url) photoAvatar = null;
+    };
+    image.src = url;
+  }
+
+  function clearPhoto() {
+    photoAvatar = null;
+    renderAll();
+  }
+
   function getConfig() {
     return { ...config };
   }
@@ -546,6 +783,8 @@ const SkeletonAvatar = (() => {
     setPresetPose,
     clearLandmarks,
     setConfig,
+    setPhoto,
+    clearPhoto,
     getConfig,
     defaultLandmarks,
     renderAll,
