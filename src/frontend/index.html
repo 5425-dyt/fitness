@@ -15,33 +15,38 @@
   <div class="app">
     <header class="header">
       <div class="header__brand">
-        <span class="header__logo">🏃</span>
+        <span class="header__logo">🌟</span>
         <div>
-          <h1 class="header__title">健身操陪伴</h1>
-          <p class="header__subtitle">AI 智能训练 · 轻量社交 · 居家健身</p>
+          <h1 class="header__title">元气共跳</h1>
+          <p class="header__subtitle">AI 陪伴 + 社交广场 · 小程序移动优先</p>
         </div>
       </div>
-      <nav class="header__nav">
-        <button class="nav-btn nav-btn--active" data-tab="home">首页</button>
-        <button class="nav-btn" data-tab="train">训练</button>
-        <button class="nav-btn" data-tab="ai">AI 陪伴</button>
-        <button class="nav-btn" data-tab="social">社交</button>
-      </nav>
       <div class="header__user">
         <span class="header__avatar">J</span>
-        <span class="header__name">健身达人</span>
       </div>
     </header>
 
     <main class="main">
       <!-- 首页概览 -->
       <section class="panel panel--active" id="panel-home">
+        <div class="checkin-reminder" id="home-checkin-reminder">
+          <div>
+            <span class="hero__badge">今日提醒</span>
+            <h3>今天还没有完成运动打卡</h3>
+            <p id="home-checkin-copy">完成一次训练或共跳后，来这里打卡记录你的坚持。</p>
+          </div>
+          <button class="btn btn--primary btn--sm" id="btn-home-checkin" type="button">立即打卡</button>
+        </div>
+
         <div class="hero">
           <div class="hero__content">
-            <span class="hero__badge">MVP 第一版</span>
-            <h2 class="hero__heading">今天也要动起来！</h2>
-            <p class="hero__desc">全屏沉浸共跳训练，骨骼虚拟伙伴关节对齐跟练；支持上传视频拆解教学、实时语音 Agent 交互。</p>
-            <button class="btn btn--primary btn--lg" id="btn-start">开始今日训练</button>
+            <span class="hero__badge">社交共跳版</span>
+            <h2 class="hero__heading">先找房间，一起动起来！</h2>
+            <p class="hero__desc">主流程改为：完善个人资料和 AI 形象 → 进入社交广场共跳 → 需要时使用单人训练和 AI 聊天。</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn btn--primary btn--lg" id="btn-start-social">进入社交广场</button>
+              <button class="btn btn--secondary btn--lg" id="btn-start">单人训练</button>
+            </div>
           </div>
           <div class="hero__stats">
             <div class="stat-card">
@@ -73,76 +78,56 @@
             </div>
           </article>
         </div>
+
+        <div class="section-head section-head--feed">
+          <h2>社群分享</h2>
+          <p>看看大家上传的编舞、训练心得和共跳片段</p>
+        </div>
+        <div class="community-feed" id="community-feed"></div>
       </section>
 
       <!-- 训练入口 -->
       <section class="panel" id="panel-train">
+        <div class="section-head">
+          <h2>训练</h2>
+          <p>先选择训练内容，也可以上传视频拆解跟练；进入训练后只需要跟随完成。</p>
+        </div>
+
+        <div class="training-picker">
+          <article class="card">
+            <h3 class="card__title">训练库</h3>
+            <p class="card__meta">选择本次要练的内容</p>
+            <div class="training-library" id="training-library"></div>
+          </article>
+
+          <article class="card">
+            <h3 class="card__title">上传视频跟练</h3>
+            <p class="card__meta">上传一个动作视频，系统会先拆解姿态，再由虚拟伙伴带你跟练</p>
+            <label class="video-upload-zone" id="train-page-video-zone">
+              <input type="file" id="train-page-video-input" accept="video/*" />
+              <span>点击上传运动视频</span>
+            </label>
+            <video id="train-page-video-preview" hidden controls style="width:100%;border-radius:14px;margin-top:12px;background:#000"></video>
+            <p id="train-page-video-info" style="font-size:0.8rem;color:var(--text-muted);margin-top:10px">等待上传</p>
+            <div class="teach-progress" style="margin-top:12px"><div class="teach-progress__fill" id="train-page-video-progress"></div></div>
+          </article>
+        </div>
+
         <div class="train-launcher">
-          <h3>沉浸共跳训练</h3>
-          <p>全屏可视化训练：摄像头 + 骨骼虚拟伙伴实时跟练，右侧边栏查看数据、语音交互、上传视频拆解教学。</p>
-          <button class="btn btn--primary btn--lg" id="btn-enter-immersive" type="button">进入全屏训练</button>
+          <h3 id="train-selected-title">已选择：今日推荐训练</h3>
+          <p id="train-selected-desc">进入后系统会按动作顺序提示，你只需要跟着完成即可。</p>
+          <button class="btn btn--primary btn--lg" id="btn-enter-immersive" type="button">进入训练</button>
         </div>
       </section>
 
       <!-- AI 陪伴 -->
       <section class="panel" id="panel-ai">
         <div class="section-head">
-          <h2>虚拟 AI 陪伴</h2>
-          <p>挑选你的可爱运动小伙伴，训练时一起蹦跶</p>
+          <h2>AI 陪伴</h2>
+          <p>一个内置聊天工具：训练建议、情绪鼓励、动作解释都在这里完成</p>
         </div>
 
-        <div class="avatar-custom">
-          <div id="avatar-preview" class="avatar-preview-box" aria-label="小伙伴预览"></div>
-          <form class="avatar-form" id="avatar-form">
-            <label class="avatar-field">
-              小伙伴昵称
-              <input type="text" id="avatar-name" maxlength="8" placeholder="跳跳" />
-            </label>
-            <label class="avatar-field">
-              物种
-              <select id="avatar-animal">
-                <option value="bunny" selected>小兔子 🐰</option>
-                <option value="cat">小猫咪 🐱</option>
-                <option value="bear">小熊熊 🐻</option>
-              </select>
-            </label>
-            <label class="avatar-field">
-              毛色
-              <input type="color" id="avatar-skin" value="#f5c6a0" />
-            </label>
-            <label class="avatar-field">
-              耳朵内侧
-              <input type="color" id="avatar-hair-color" value="#e8a87c" />
-            </label>
-            <label class="avatar-field">
-              围巾颜色
-              <input type="color" id="avatar-top" value="#ff6b4a" />
-            </label>
-            <label class="avatar-field">
-              肚皮颜色
-              <input type="color" id="avatar-bottom" value="#ffe8d6" />
-            </label>
-            <div class="avatar-form-actions">
-              <button type="button" class="btn btn--secondary btn--sm" id="btn-avatar-reset">恢复默认</button>
-            </div>
-          </form>
-        </div>
-
-        <div class="ai-chat">
-          <div class="sidebar-card">
-            <h4>上传人物照片（制作 2D 动画）</h4>
-            <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px">上传一张人物照片，后端基于 MagicAnimate/SD1.5 生成动作驱动的 2D 动画（需后端部署）。</p>
-            <label class="video-upload-zone" id="photo-upload-zone" style="cursor:pointer">
-              <input type="file" id="photo-file-input" accept="image/*" />
-              <span>📁 点击上传照片</span>
-            </label>
-            <img id="photo-preview" hidden alt="照片预览" style="width:100%;border-radius:10px;margin-top:10px;object-fit:cover;background:#111" />
-            <p id="photo-status" style="font-size:0.8rem;color:#8b9cb3;margin-top:8px">等待上传</p>
-            <div style="display:flex;gap:8px;margin-top:8px">
-              <button class="btn btn--primary btn--sm" id="btn-generate-animate" type="button">生成 2D 动画</button>
-              <button class="btn btn--secondary btn--sm" id="btn-clear-animate" type="button">清除动画</button>
-            </div>
-          </div>
+        <div class="ai-chat ai-chat--tool">
           <div class="ai-chat__companion">
             <div class="companion-style">
               <span>陪伴风格</span>
@@ -152,7 +137,8 @@
                 <button class="style-tag" data-style="fun">轻松搞笑</button>
               </div>
             </div>
-            <p class="companion-hint"><strong data-avatar-name>跳跳</strong> 会跟着你一起动：蹦跳、深蹲、拉伸都有专属可爱动画，上传视频还能拆解带练</p>
+            <p class="companion-hint"><strong data-avatar-name>跳跳</strong> 会根据你的个人资料、训练目标和共跳状态，给你建议和鼓励。</p>
+            <button class="btn btn--secondary btn--sm" id="btn-ai-go-profile" type="button">去我的页面修改资料和形象</button>
           </div>
           <div class="ai-chat__messages" id="chat-messages"></div>
           <form class="ai-chat__input" id="chat-form">
@@ -162,29 +148,416 @@
         </div>
       </section>
 
-      <!-- 社交 -->
+      <!-- 社交广场 -->
       <section class="panel" id="panel-social">
         <div class="section-head">
-          <h2>社交打卡</h2>
-          <p>好友组队、积分激励，一起坚持更有趣</p>
+          <h2>社交广场</h2>
+          <p>创建房间、加入房间，在同一虚拟空间共跳</p>
         </div>
-        <div class="checkin-card">
-          <div class="checkin-card__info">
-            <h3>今日打卡</h3>
-            <p id="checkin-status">今天还没有打卡哦</p>
+
+        <div class="social-lobby" id="social-lobby">
+          <div class="social-card">
+            <h3>创建房间</h3>
+            <div class="social-form">
+              <label class="avatar-field">
+                房间名
+                <input id="social-create-name" type="text" maxlength="20" placeholder="晨练元气房" />
+              </label>
+              <label class="avatar-field">
+                共跳模式
+                <select id="social-create-mode">
+                  <option value="free-jump">自由共跳</option>
+                  <option value="library-jump">训练库共跳</option>
+                  <option value="relay-jump">接力共跳</option>
+                  <option value="group-choreo">集体编舞</option>
+                </select>
+              </label>
+              <label class="avatar-field">
+                共跳内容
+                <select id="social-create-workout">
+                  <option value="improv">即兴跳</option>
+                  <option value="fat-burn">燃脂操</option>
+                  <option value="cardio">心肺有氧</option>
+                  <option value="flexibility">拉伸放松</option>
+                </select>
+              </label>
+              <label class="avatar-field">
+                人数上限
+                <select id="social-create-max">
+                  <option value="4">4 人</option>
+                  <option value="6" selected>6 人</option>
+                  <option value="8">8 人</option>
+                  <option value="12">12 人</option>
+                </select>
+              </label>
+              <button class="btn btn--primary" id="btn-social-create" type="button">创建并加入</button>
+            </div>
           </div>
-          <button class="btn btn--primary" id="btn-checkin">立即打卡 +10 积分</button>
+
+          <div class="social-card">
+            <div class="social-card__head">
+              <h3>房间大厅</h3>
+              <button class="btn btn--secondary btn--sm" id="btn-social-refresh" type="button">刷新</button>
+            </div>
+            <ul class="social-room-list" id="social-room-list"></ul>
+          </div>
         </div>
-        <h3 class="sub-title">好友动态</h3>
-        <ul class="friend-feed" id="friend-feed"></ul>
-        <h3 class="sub-title">本周排行榜</h3>
-        <ol class="leaderboard" id="leaderboard"></ol>
+
+        <div class="social-room hidden" id="social-room">
+          <div class="social-card social-card--room-head">
+            <div class="social-room-meta">
+              <h3 id="social-room-name">未加入房间</h3>
+              <p>房间号：<span id="social-room-code">----</span> · 模式：<span id="social-room-mode">自由共跳</span></p>
+            </div>
+          </div>
+
+          <div class="social-stage-wrap">
+            <div class="social-video-wrap">
+              <span class="social-pane-label">我的摄像头</span>
+              <span class="social-detect-badge" id="social-detect-badge">等待识别</span>
+              <video id="social-local-video" autoplay muted playsinline></video>
+              <canvas id="social-local-pose-canvas" aria-hidden="true"></canvas>
+              <div class="camera-placeholder" id="social-video-placeholder">
+                <span class="camera-placeholder__icon">📷</span>
+                <p>点击“开始共跳”开启摄像头</p>
+              </div>
+            </div>
+            <div class="social-stage" id="social-stage">
+              <span class="social-pane-label social-pane-label--plaza">MediaPipe 骨架广场</span>
+              <canvas id="social-stage-pose-canvas" aria-hidden="true"></canvas>
+            </div>
+          </div>
+
+          <div class="social-grid">
+            <div class="social-card social-control-card">
+              <h4>房间操作</h4>
+              <div class="social-room-actions">
+                <button class="btn btn--primary btn--sm" id="btn-social-start" type="button">开始共跳</button>
+                <button class="btn btn--secondary btn--sm" id="btn-social-relay" type="button">下一棒</button>
+                <button class="btn btn--secondary btn--sm" id="btn-social-record" type="button">开始录屏</button>
+                <button class="btn btn--secondary btn--sm" id="btn-social-leave" type="button">退出房间</button>
+              </div>
+            </div>
+
+            <div class="social-card social-data-card">
+              <h4>实时数据</h4>
+              <div class="stat-grid">
+                <div class="stat-mini">
+                  <span class="stat-mini__val" id="social-self-motion">0%</span>
+                  <span class="stat-mini__lbl">我的动作幅度</span>
+                </div>
+                <div class="stat-mini">
+                  <span class="stat-mini__val" id="social-self-jumps">0</span>
+                  <span class="stat-mini__lbl">我的跳跃次数</span>
+                </div>
+                <div class="stat-mini">
+                  <span class="stat-mini__val" id="social-team-sync">0%</span>
+                  <span class="stat-mini__lbl">团队同步率</span>
+                </div>
+                <div class="stat-mini">
+                  <span class="stat-mini__val" id="social-relay-index">-</span>
+                  <span class="stat-mini__lbl">当前接力位</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="social-card social-choreo-card">
+              <div class="social-card__head">
+                <h4>集体编舞</h4>
+                <button class="btn btn--secondary btn--sm" id="btn-social-publish-choreo" type="button">发布编舞</button>
+              </div>
+              <div class="social-form social-form--inline">
+                <select id="social-choreo-action">
+                  <option value="jump">开合跳</option>
+                  <option value="squat">深蹲</option>
+                  <option value="stretch">拉伸</option>
+                  <option value="run">高抬腿</option>
+                  <option value="plank">平板支撑</option>
+                </select>
+                <input id="social-choreo-duration" type="number" min="4" max="60" step="2" value="12" />
+                <button class="btn btn--secondary btn--sm" id="btn-social-add-choreo" type="button">添加动作</button>
+              </div>
+              <ul class="social-choreo-list" id="social-choreo-list"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 个人主页 -->
+      <section class="panel" id="panel-profile">
+        <div class="section-head">
+          <h2>我的</h2>
+          <p>个人资料、训练偏好和 AI 陪伴形象都在这里维护</p>
+        </div>
+
+        <article class="card profile-card">
+          <div class="profile-card__head">
+            <span class="header__avatar" id="profile-avatar-badge">J</span>
+            <div>
+              <h3 id="profile-display-name">健身达人</h3>
+              <p id="profile-display-desc">目标：燃脂塑形 · 当前等级：初学者</p>
+            </div>
+          </div>
+          <form class="profile-form" id="profile-form">
+            <label class="avatar-field">
+              昵称
+              <input type="text" id="profile-name" maxlength="12" placeholder="健身达人" />
+            </label>
+            <label class="avatar-field">
+              性别
+              <select id="profile-gender">
+                <option value="none">不展示</option>
+                <option value="female">女</option>
+                <option value="male">男</option>
+                <option value="other">其他</option>
+              </select>
+            </label>
+            <label class="avatar-field">
+              年龄
+              <input type="number" id="profile-age" min="6" max="90" placeholder="20" />
+            </label>
+            <label class="avatar-field">
+              身高（cm）
+              <input type="number" id="profile-height" min="80" max="230" placeholder="170" />
+            </label>
+            <label class="avatar-field">
+              体重（kg）
+              <input type="number" id="profile-weight" min="20" max="200" placeholder="60" />
+            </label>
+            <label class="avatar-field">
+              健身目标
+              <select id="profile-goal">
+                <option value="fat-burn">燃脂塑形</option>
+                <option value="flexibility">柔韧拉伸</option>
+                <option value="cardio">心肺提升</option>
+              </select>
+            </label>
+            <label class="avatar-field">
+              训练等级
+              <select id="profile-level">
+                <option value="easy">初学者</option>
+                <option value="medium">进阶</option>
+                <option value="hard">挑战</option>
+              </select>
+            </label>
+            <label class="avatar-field">
+              每周目标
+              <select id="profile-weekly-target">
+                <option value="3">每周 3 次</option>
+                <option value="5">每周 5 次</option>
+                <option value="7">每天训练</option>
+              </select>
+            </label>
+            <label class="avatar-field profile-field--full">
+              个性签名
+              <input type="text" id="profile-bio" maxlength="36" placeholder="今天也要动起来！" />
+            </label>
+            <div class="avatar-form-actions profile-field--full">
+              <button type="button" class="btn btn--primary btn--sm" id="btn-profile-save">保存个人资料</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <h3 class="card__title">我的 AI 陪伴形象</h3>
+          <p class="card__meta">基础外观和高级 Wizard 合并在这里，统一管理你在训练、社交共跳和聊天中使用的 AI 伙伴</p>
+          <div class="avatar-custom">
+            <div id="avatar-preview" class="avatar-preview-box" aria-label="小伙伴预览"></div>
+            <form class="avatar-form" id="avatar-form">
+              <label class="avatar-field">
+                小伙伴昵称
+                <input type="text" id="avatar-name" maxlength="8" placeholder="跳跳" />
+              </label>
+              <label class="avatar-field">
+                物种
+                <select id="avatar-animal">
+                  <option value="bunny" selected>小兔子 🐰</option>
+                  <option value="cat">小猫咪 🐱</option>
+                  <option value="bear">小熊熊 🐻</option>
+                </select>
+              </label>
+              <label class="avatar-field">
+                毛色
+                <input type="color" id="avatar-skin" value="#f5c6a0" />
+              </label>
+              <label class="avatar-field">
+                耳朵内侧
+                <input type="color" id="avatar-hair-color" value="#e8a87c" />
+              </label>
+              <label class="avatar-field">
+                围巾颜色
+                <input type="color" id="avatar-top" value="#ff6b4a" />
+              </label>
+              <label class="avatar-field">
+                肚皮颜色
+                <input type="color" id="avatar-bottom" value="#ffe8d6" />
+              </label>
+              <div class="avatar-form-actions">
+                <button type="button" class="btn btn--secondary btn--sm" id="btn-avatar-reset">恢复默认</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="profile-avatar-wizard">
+          <h3 class="card__title">高级角色配置（Wizard）</h3>
+          <p class="card__meta">按步骤配置专属角色，保存后会在图片、动画、对话和共跳中统一使用</p>
+          <p id="avatar-wizard-step" style="font-size:0.8rem;color:#8b9cb3;margin:0 0 8px">Step 1 / 8：选择物种</p>
+
+          <div id="wizard-step-1" class="wizard-step">
+            <label class="avatar-field">
+              物种
+              <select id="wizard-species">
+                <option value="bunny">🐰 小兔子</option>
+                <option value="cat">🐱 小猫</option>
+                <option value="dog">🐶 小狗</option>
+                <option value="fox">🦊 小狐狸</option>
+                <option value="panda">🐼 熊猫</option>
+                <option value="bear">🐻 小熊</option>
+                <option value="lion">🦁 小狮子</option>
+                <option value="penguin">🐧 企鹅</option>
+                <option value="frog">🐸 青蛙</option>
+                <option value="robot">🤖 机器人</option>
+              </select>
+            </label>
+          </div>
+          <div id="wizard-step-2" class="wizard-step" hidden>
+            <label class="avatar-field">
+              整体风格
+              <select id="wizard-style">
+                <option value="cute">可爱</option>
+                <option value="healing">治愈</option>
+                <option value="energetic">元气</option>
+                <option value="sporty">运动</option>
+                <option value="sci-fi">科幻</option>
+                <option value="japanese">日系</option>
+                <option value="us-cartoon">美式动画</option>
+                <option value="minimal">极简</option>
+                <option value="plush">毛绒玩偶</option>
+                <option value="pixar">Pixar 风格</option>
+              </select>
+            </label>
+          </div>
+          <div id="wizard-step-3" class="wizard-step" hidden>
+            <div class="avatar-form">
+              <label class="avatar-field">毛色<input type="color" id="wizard-color-fur" value="#f5c6a0" /></label>
+              <label class="avatar-field">肚皮<input type="color" id="wizard-color-belly" value="#ffe8d6" /></label>
+              <label class="avatar-field">耳朵<input type="color" id="wizard-color-ears" value="#e8a87c" /></label>
+              <label class="avatar-field">鼻子<input type="color" id="wizard-color-nose" value="#e88f8f" /></label>
+              <label class="avatar-field">脚掌<input type="color" id="wizard-color-paws" value="#f7d8be" /></label>
+              <label class="avatar-field">尾巴<input type="color" id="wizard-color-tail" value="#f3c2a0" /></label>
+              <label class="avatar-field">眼睛<input type="color" id="wizard-color-eyes" value="#2a2018" /></label>
+            </div>
+          </div>
+          <div id="wizard-step-4" class="wizard-step" hidden>
+            <div class="avatar-form">
+              <label class="avatar-field">耳朵
+                <select id="wizard-ears"><option value="long">长耳朵</option><option value="short">短耳朵</option><option value="droopy">垂耳</option></select>
+              </label>
+              <label class="avatar-field">尾巴
+                <select id="wizard-tail"><option value="long">长</option><option value="short">短</option><option value="fluffy">蓬松</option></select>
+              </label>
+              <label class="avatar-field">体型
+                <select id="wizard-size"><option value="small">小巧</option><option value="standard">标准</option><option value="round">圆滚滚</option><option value="fit">健壮</option></select>
+              </label>
+              <label class="avatar-field">眼型
+                <select id="wizard-eyes-shape"><option value="round">圆眼</option><option value="almond">杏眼</option><option value="big">大眼睛</option><option value="half">半眯眼</option></select>
+              </label>
+            </div>
+          </div>
+          <div id="wizard-step-5" class="wizard-step" hidden>
+            <div class="avatar-form">
+              <label class="avatar-field">服装
+                <select id="wizard-clothes-type"><option value="sportswear">运动服</option><option value="hoodie">连帽衫</option><option value="tshirt">T 恤</option><option value="basketball">篮球服</option><option value="tennis">网球服</option><option value="yoga">瑜伽服</option></select>
+              </label>
+              <label class="avatar-field">服装颜色<input type="color" id="wizard-clothes-color" value="#ff6b4a" /></label>
+            </div>
+          </div>
+          <div id="wizard-step-6" class="wizard-step" hidden>
+            <div class="avatar-form">
+              <label class="avatar-field">帽子<select id="wizard-acc-hat"><option value="none">无</option><option value="sport-cap">运动帽</option></select></label>
+              <label class="avatar-field">围巾<select id="wizard-acc-scarf"><option value="none">无</option><option value="light">轻围巾</option></select></label>
+              <label class="avatar-field">眼镜<select id="wizard-acc-glasses"><option value="none">无</option><option value="round">圆框</option></select></label>
+              <label class="avatar-field">发带<select id="wizard-acc-headband"><option value="none">无</option><option value="sport">运动发带</option></select></label>
+              <label class="avatar-field">耳机<select id="wizard-acc-headphones"><option value="none">无</option><option value="sport">运动耳机</option></select></label>
+              <label class="avatar-field">背包<select id="wizard-acc-backpack"><option value="none">无</option><option value="mini">迷你背包</option></select></label>
+              <label class="avatar-field">护腕<select id="wizard-acc-wristband"><option value="none">无</option><option value="pair">一对</option></select></label>
+            </div>
+          </div>
+          <div id="wizard-step-7" class="wizard-step" hidden>
+            <label class="avatar-field">
+              性格
+              <select id="wizard-personality">
+                <option value="warm">温暖鼓励</option>
+                <option value="strict">严格教练</option>
+                <option value="funny">搞笑</option>
+                <option value="energetic">活泼</option>
+                <option value="steady">沉稳</option>
+                <option value="genki">元气</option>
+                <option value="tsundere">傲娇</option>
+                <option value="quiet">安静</option>
+              </select>
+            </label>
+          </div>
+          <div id="wizard-step-8" class="wizard-step" hidden>
+            <label class="avatar-field">
+              声音（预留）
+              <select id="wizard-voice-style">
+                <option value="reserved">预留（后续接 TTS/Voice Clone）</option>
+                <option value="warm">温暖</option>
+                <option value="coach">教练</option>
+              </select>
+            </label>
+          </div>
+
+          <p id="photo-status" style="font-size:0.8rem;color:#8b9cb3;margin-top:8px">等待创建角色</p>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <button class="btn btn--secondary btn--sm" id="btn-wizard-prev" type="button">上一步</button>
+            <button class="btn btn--secondary btn--sm" id="btn-wizard-next" type="button">下一步</button>
+            <button class="btn btn--primary btn--sm" id="btn-generate-animate" type="button">创建并保存角色</button>
+            <button class="btn btn--secondary btn--sm" id="btn-clear-animate" type="button">重置</button>
+          </div>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn--secondary btn--sm" type="button" data-preset="tiaotiao">跳跳</button>
+            <button class="btn btn--secondary btn--sm" type="button" data-preset="paopao">泡泡</button>
+            <button class="btn btn--secondary btn--sm" type="button" data-preset="shandian">闪电</button>
+            <button class="btn btn--secondary btn--sm" type="button" data-preset="naitang">奶糖</button>
+            <button class="btn btn--secondary btn--sm" type="button" data-preset="duole">多乐</button>
+            <button class="btn btn--secondary btn--sm" type="button" data-preset="coco">Coco</button>
+          </div>
+          </div>
+        </article>
+
+        <div class="grid-2">
+          <article class="card">
+            <h3 class="card__title">我的数据</h3>
+            <p class="card__meta">移动端展示</p>
+            <ul class="workout-list">
+              <li><span class="workout-list__icon">🔥</span><span>连续训练</span><span class="workout-list__duration" id="profile-streak">3 天</span></li>
+              <li><span class="workout-list__icon">🏅</span><span>总积分</span><span class="workout-list__duration" id="profile-points">120 分</span></li>
+              <li><span class="workout-list__icon">⏱️</span><span>本周时长</span><span class="workout-list__duration" id="profile-minutes">25 分钟</span></li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3 class="card__title">工作流</h3>
+            <p class="card__meta">推荐使用路径</p>
+            <ul class="workout-list">
+              <li><span class="workout-list__icon">👤</span><span>先完善资料和 AI 形象</span><span class="workout-list__duration">我的</span></li>
+              <li><span class="workout-list__icon">🕺</span><span>进入房间与好友共跳</span><span class="workout-list__duration">社交</span></li>
+              <li><span class="workout-list__icon">🎯</span><span>需要单人练习时进训练</span><span class="workout-list__duration">训练</span></li>
+              <li><span class="workout-list__icon">🤖</span><span>随时向 AI 提问</span><span class="workout-list__duration">聊天</span></li>
+            </ul>
+          </article>
+        </div>
       </section>
     </main>
 
-    <footer class="footer">
-      <p>健身操运动陪伴系统 · 沉浸训练版 · MediaPipe 姿态 + 语音 Agent</p>
-    </footer>
+    <nav class="bottom-nav">
+      <button class="nav-btn nav-btn--active" data-tab="home" type="button"><span>🏠</span><em>首页</em></button>
+      <button class="nav-btn" data-tab="social" type="button"><span>🕺</span><em>社交广场</em></button>
+      <button class="nav-btn" data-tab="train" type="button"><span>🎯</span><em>训练</em></button>
+      <button class="nav-btn" data-tab="ai" type="button"><span>🤖</span><em>AI聊天</em></button>
+      <button class="nav-btn" data-tab="profile" type="button"><span>👤</span><em>我的</em></button>
+    </nav>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -335,6 +708,8 @@
     </div>
   </div>
 
+  <script src="character-profile.js"></script>
+  <script src="promptBuilder.js"></script>
   <script src="pose-engine.js"></script>
   <script src="avatar-skeleton.js"></script>
   <script src="camera.js"></script>

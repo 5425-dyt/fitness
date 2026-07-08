@@ -84,8 +84,6 @@ const Avatar = (() => {
   function setLandmarks(lm) {
     if (lm) {
       SkeletonAvatar.setLandmarks(lm);
-      const label = document.getElementById("duo-pose-label");
-      if (label && photoUrl) label.textContent = "照片形象跟练";
     } else {
       SkeletonAvatar.clearLandmarks();
       SkeletonAvatar.setPresetPose(currentPose);
@@ -94,16 +92,13 @@ const Avatar = (() => {
 
   function setPhoto(url) {
     photoUrl = url || "";
+    // Character Identity 模式下，上传照片仅用于后端角色建模，不再直接贴图到虚拟形象
     document.getElementById("avatar-stage")?.querySelector(".avatar-2d-anim")?.remove();
     document.getElementById("avatar-preview")?.querySelector(".avatar-2d-anim")?.remove();
-    SkeletonAvatar.setPhoto(photoUrl);
-    const label = document.getElementById("duo-pose-label");
-    if (label && photoUrl) label.textContent = "照片形象待命";
   }
 
   function clearPhoto() {
     photoUrl = "";
-    SkeletonAvatar.clearPhoto();
     setPose(currentPose);
   }
 
@@ -174,6 +169,7 @@ const Avatar = (() => {
     updateNameLabels();
     syncForm();
     bindCustomizer();
+    clearPhoto();
     setPose("idle");
   }
 

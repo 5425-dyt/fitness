@@ -297,3 +297,31 @@
     max-height: 220px;
   }
 }
+
+/* Beige + green theme */
+.duo-pane {
+  background: #edf7e8;
+}
+
+.duo-pane--partner,
+.avatar-preview-box {
+  background:
+    radial-gradient(80% 80% at 50% 100%, rgba(111, 189, 121, 0.22), transparent 68%),
+    linear-gradient(180deg, #fffaf0 0%, #e4f2dc 100%);
+  border-color: #d8e4cf;
+}
+
+.duo-pane__label {
+  background: rgba(50, 75, 45, 0.62);
+  color: #fffaf0;
+}
+
+.duo-pane__label--partner,
+.duo-pose-label {
+  color: #2f8f68;
+  border-color: rgba(79, 159, 100, 0.35);
+}
+
+.avatar {
+  filter: drop-shadow(0 8px 16px rgba(76, 103, 68, 0.22));
+}

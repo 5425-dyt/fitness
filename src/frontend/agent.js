@@ -205,6 +205,71 @@ const VoiceAgent = (() => {
     return { ok: false, error: lastError || "上传接口不可用" };
   }
 
+  async function createCharacterProfile(config, presetId = "") {
+    const endpoints = location.protocol === "file:"
+      ? ["http://localhost:8766/character/config"]
+      : ["/character/config", "http://localhost:8766/character/config"];
+
+    let lastError = "";
+    for (const endpoint of endpoints) {
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            config: config || {},
+            preset_id: presetId || "",
+          }),
+        });
+        if (!res.ok) {
+          lastError = res.statusText || `HTTP ${res.status}`;
+          continue;
+        }
+        const data = await res.json();
+        return { ok: true, data };
+      } catch (err) {
+        lastError = err.message;
+      }
+    }
+    return { ok: false, error: lastError || "Character 配置接口不可用" };
+  }
+
+  async function generateWithProfile(profileId, sceneSpec = {}) {
+    if (!profileId) return { ok: false, error: "character_id required" };
+    const endpoints = location.protocol === "file:"
+      ? ["http://localhost:8766/character/generate"]
+      : ["/character/generate", "http://localhost:8766/character/generate"];
+
+    let lastError = "";
+    for (const endpoint of endpoints) {
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            profile_id: profileId,
+            scene: sceneSpec.scene || "",
+            action: sceneSpec.action || "",
+            lighting: sceneSpec.lighting || "",
+            camera: sceneSpec.camera || "",
+            mood: sceneSpec.mood || "",
+            outfit: sceneSpec.outfit || "",
+            mode: "image",
+          }),
+        });
+        if (!res.ok) {
+          lastError = res.statusText || `HTTP ${res.status}`;
+          continue;
+        }
+        const data = await res.json();
+        return { ok: true, data };
+      } catch (err) {
+        lastError = err.message;
+      }
+    }
+    return { ok: false, error: lastError || "生成接口不可用" };
+  }
+
   return {
     init,
     speak,
@@ -213,6 +278,8 @@ const VoiceAgent = (() => {
     getEndpoint,
     setEndpoint,
     uploadPhoto,
+    createCharacterProfile,
+    generateWithProfile,
     isListening: () => listening,
   };
 })();

@@ -239,66 +239,195 @@ const TrainMode = (() => {
   }
 
   function bindPhotoAnimate() {
-    const zone = document.getElementById('photo-upload-zone');
-    const input = document.getElementById('photo-file-input');
-    const preview = document.getElementById('photo-preview');
     const status = document.getElementById('photo-status');
+    const stepLabel = document.getElementById("avatar-wizard-step");
+    const prevBtn = document.getElementById("btn-wizard-prev");
+    const nextBtn = document.getElementById("btn-wizard-next");
     const btnGen = document.getElementById('btn-generate-animate');
     const btnClear = document.getElementById('btn-clear-animate');
-    let lastFile = null;
-    let photoUrl = null;
+    const steps = Array.from(document.querySelectorAll(".wizard-step"));
+    let step = 1;
 
-    zone?.addEventListener('click', () => input?.click());
-    input?.addEventListener('change', (e) => {
-      const f = e.target.files?.[0];
-      if (!f) return;
-      lastFile = f;
-      if (photoUrl) URL.revokeObjectURL(photoUrl);
-      photoUrl = URL.createObjectURL(f);
-      if (preview) { preview.src = photoUrl; preview.hidden = false; }
-      Avatar.setPhoto(photoUrl);
-      if (status) status.textContent = '已选择照片，训练时会实时跟随你的动作';
-      showToast('照片形象已启用');
-    });
+    function setStep(v) {
+      step = Math.min(Math.max(v, 1), 8);
+      steps.forEach((el, idx) => { el.hidden = idx !== step - 1; });
+      if (stepLabel) stepLabel.textContent = `Step ${step} / 8`;
+      if (prevBtn) prevBtn.disabled = step === 1;
+      if (nextBtn) nextBtn.disabled = step === 8;
+    }
+
+    function readWizardConfig() {
+      return {
+        species: document.getElementById("wizard-species")?.value || "bunny",
+        style: document.getElementById("wizard-style")?.value || "cute",
+        colors: {
+          fur: document.getElementById("wizard-color-fur")?.value || "#f5c6a0",
+          belly: document.getElementById("wizard-color-belly")?.value || "#ffe8d6",
+          ears: document.getElementById("wizard-color-ears")?.value || "#e8a87c",
+          nose: document.getElementById("wizard-color-nose")?.value || "#e88f8f",
+          paws: document.getElementById("wizard-color-paws")?.value || "#f7d8be",
+          tail: document.getElementById("wizard-color-tail")?.value || "#f3c2a0",
+          eyes: document.getElementById("wizard-color-eyes")?.value || "#2a2018",
+          clothes: document.getElementById("wizard-clothes-color")?.value || "#ff6b4a",
+        },
+        body: {
+          ears: document.getElementById("wizard-ears")?.value || "long",
+          tail: document.getElementById("wizard-tail")?.value || "fluffy",
+          size: document.getElementById("wizard-size")?.value || "standard",
+          eyes: document.getElementById("wizard-eyes-shape")?.value || "round",
+        },
+        clothes: {
+          type: document.getElementById("wizard-clothes-type")?.value || "sportswear",
+          color: document.getElementById("wizard-clothes-color")?.value || "#ff6b4a",
+        },
+        accessories: {
+          hat: document.getElementById("wizard-acc-hat")?.value || "none",
+          scarf: document.getElementById("wizard-acc-scarf")?.value || "none",
+          glasses: document.getElementById("wizard-acc-glasses")?.value || "none",
+          headband: document.getElementById("wizard-acc-headband")?.value || "none",
+          headphones: document.getElementById("wizard-acc-headphones")?.value || "none",
+          backpack: document.getElementById("wizard-acc-backpack")?.value || "none",
+          wristband: document.getElementById("wizard-acc-wristband")?.value || "none",
+        },
+        personality: document.getElementById("wizard-personality")?.value || "warm",
+        voice: { provider: "reserved", style: document.getElementById("wizard-voice-style")?.value || "reserved" },
+        animationStyle: "bouncy",
+        promptTemplate: "",
+      };
+    }
+
+    function applyCharacterPreview(config) {
+      Avatar.setConfig({
+        animal: config.species === "robot" ? "bear" : (["bunny", "cat", "bear"].includes(config.species) ? config.species : "bunny"),
+        skin: config.colors.fur,
+        hairColor: config.colors.ears,
+        topColor: config.colors.clothes,
+        bottomColor: config.colors.belly,
+      });
+    }
+
+    function setWizardFromCharacter(character) {
+      if (!character) return;
+      const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val != null) el.value = val;
+      };
+      set("wizard-species", character.species);
+      set("wizard-style", character.style);
+      set("wizard-color-fur", character.colors?.fur);
+      set("wizard-color-belly", character.colors?.belly);
+      set("wizard-color-ears", character.colors?.ears);
+      set("wizard-color-nose", character.colors?.nose);
+      set("wizard-color-paws", character.colors?.paws);
+      set("wizard-color-tail", character.colors?.tail);
+      set("wizard-color-eyes", character.colors?.eyes);
+      set("wizard-ears", character.body?.ears);
+      set("wizard-tail", character.body?.tail);
+      set("wizard-size", character.body?.size);
+      set("wizard-eyes-shape", character.body?.eyes);
+      set("wizard-clothes-type", character.clothes?.type);
+      set("wizard-clothes-color", character.clothes?.color || character.colors?.clothes);
+      set("wizard-acc-hat", character.accessories?.hat);
+      set("wizard-acc-scarf", character.accessories?.scarf);
+      set("wizard-acc-glasses", character.accessories?.glasses);
+      set("wizard-acc-headband", character.accessories?.headband);
+      set("wizard-acc-headphones", character.accessories?.headphones);
+      set("wizard-acc-backpack", character.accessories?.backpack);
+      set("wizard-acc-wristband", character.accessories?.wristband);
+      set("wizard-personality", character.personality);
+      set("wizard-voice-style", character.voice?.style);
+    }
+
+    function wireWizardLivePreview() {
+      document.querySelectorAll(".wizard-step input, .wizard-step select").forEach((el) => {
+        el.addEventListener("input", () => applyCharacterPreview(readWizardConfig()));
+        el.addEventListener("change", () => applyCharacterPreview(readWizardConfig()));
+      });
+    }
+
+    prevBtn?.addEventListener("click", () => setStep(step - 1));
+    nextBtn?.addEventListener("click", () => setStep(step + 1));
+    setStep(1);
+    wireWizardLivePreview();
+    const existingCharacter = CharacterProfileStore.getCharacter?.();
+    if (existingCharacter) setWizardFromCharacter(existingCharacter);
+    applyCharacterPreview(readWizardConfig());
 
     btnGen?.addEventListener('click', async () => {
-      if (!lastFile) { showToast('请先选择照片'); return; }
-      if (status) status.textContent = '正在提交后端生成任务…';
-      const res = await VoiceAgent.uploadPhoto(lastFile, getMotionSequence());
-      if (!res.ok) {
-        showToast('后端暂不可用，已使用本地 2D 跟练');
-        status.textContent = `本地 2D 跟练已启用；后端未连接：${res.error || '上传失败'}`;
+      const existingProfile = CharacterProfileStore.load();
+      const config = readWizardConfig();
+      applyCharacterPreview(config);
+
+      if (status) status.textContent = '正在创建并保存角色配置…';
+      const profileRes = await VoiceAgent.createCharacterProfile(config);
+      if (!profileRes.ok) {
+        showToast('角色创建失败');
+        status.textContent = `后端未连接：${profileRes.error || 'character config 接口不可用'}`;
         return;
       }
 
-      const data = res.data || {};
-      status.textContent = data.message || '已提交姿态驱动生成任务；当前继续使用本地实时预览';
-      if (data.animation_url) {
-        Avatar.play2DAnimation(data.animation_url);
-        showToast('MagicAnimate 动画已加载');
-      } else if (data.task_id) {
-        showToast('MagicAnimate 输入已提交');
-      } else if (data.preview_url) {
-        Avatar.setPhoto(data.preview_url);
-        showToast('后端已保存参考图和动作序列');
+      const profileRecord = {
+        character_id: profileRes.data.character_id,
+        character: profileRes.data.character || {},
+      };
+      CharacterProfileStore.save(profileRecord);
+
+      const sceneSpec = PromptBuilder.buildSceneSpec({
+        scene: "training studio",
+        action: "standing with relaxed posture",
+        lighting: "soft key light",
+        camera: "medium shot",
+        mood: "energetic",
+        outfit: "sportswear",
+      });
+      if (status) status.textContent = '角色已保存，正在使用新角色进行首次生成…';
+      const genRes = await VoiceAgent.generateWithProfile(profileRecord.character_id, sceneSpec);
+      if (!genRes.ok) {
+        showToast('角色生成失败');
+        status.textContent = `角色已保存，但生成接口不可用：${genRes.error || 'unknown'}`;
       } else {
-        showToast('已提交后端，当前使用本地 2D 跟练');
+        status.textContent = `角色已保存（ID: ${profileRecord.character_id.slice(0, 8)}，一致性 ${genRes.data.identity_similarity || "--"}%）。`;
+        showToast('AI 陪伴角色创建成功');
       }
     });
 
     btnClear?.addEventListener('click', () => {
-      if (preview) { preview.hidden = true; preview.src = ''; }
       const stage = document.getElementById('avatar-stage');
       const old = stage?.querySelector('.avatar-2d-anim');
       if (old) old.remove();
-      if (photoUrl) {
-        URL.revokeObjectURL(photoUrl);
-        photoUrl = null;
-      }
       Avatar.clearPhoto();
-      if (status) status.textContent = '已清除';
-      lastFile = null;
-      if (input) input.value = "";
+      CharacterProfileStore.clear();
+      if (status) status.textContent = '已重置角色创建流程';
+      setStep(1);
+      applyCharacterPreview(readWizardConfig());
+    });
+
+    document.querySelectorAll("[data-preset]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const presetId = btn.getAttribute("data-preset");
+        if (!presetId) return;
+        if (status) status.textContent = `正在套用模板 ${presetId}...`;
+        const res = await VoiceAgent.createCharacterProfile({}, presetId);
+        if (!res.ok) {
+          showToast("模板应用失败");
+          status.textContent = `模板失败：${res.error || "接口不可用"}`;
+          return;
+        }
+        const record = { character_id: res.data.character_id, character: res.data.character || {} };
+        CharacterProfileStore.save(record);
+        setWizardFromCharacter(record.character);
+        applyCharacterPreview({
+          species: record.character.species || "bunny",
+          colors: {
+            fur: record.character.colors?.fur || "#f5c6a0",
+            ears: record.character.colors?.ears || "#e8a87c",
+            belly: record.character.colors?.belly || "#ffe8d6",
+            clothes: record.character.colors?.clothes || "#ff6b4a",
+          },
+        });
+        status.textContent = `模板已应用：${presetId}（ID: ${record.character_id.slice(0, 8)}）`;
+        showToast("模板角色创建成功");
+      });
     });
   }
 
@@ -338,10 +467,14 @@ const TrainMode = (() => {
     Camera.stop();
   }
 
-  function init() {
+  async function init() {
+    await CharacterProfileStore.syncFromBackend?.();
     bindSidebarTabs();
     bindVideoTeaching();
     bindPhotoAnimate();
+    if (!CharacterProfileStore.getProfileId?.()) {
+      document.querySelector('.sidebar-tab[data-tab="ai"]')?.click();
+    }
 
     document.getElementById("btn-enter-immersive")?.addEventListener("click", enter);
     document.getElementById("btn-exit-immersive")?.addEventListener("click", exit);
