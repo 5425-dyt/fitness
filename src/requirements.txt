@@ -1,3 +1,5 @@
 fastapi
-uvicorn
+uvicorn>=0.20.0
 python-multipart
+openai>=1.0.0
+python-dotenv>=1.0.0

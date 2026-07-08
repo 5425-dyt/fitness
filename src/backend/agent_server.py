@@ -1,7 +1,9 @@
 """
+健身操运动陪伴系统 - 后端服务
+
 可选本地 Agent 服务。启动后在前端「语音」侧栏填入 http://localhost:8766/agent
 
-  pip install fastapi uvicorn
+  pip install fastapi uvicorn openai python-dotenv
   python src/backend/agent_server.py
 """
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -18,7 +20,10 @@ import asyncio
 import random
 import string
 import time
-from typing import Any, Dict, List
+import os
+from typing import Any, Dict, List, Optional
+from dotenv import load_dotenv
+from openai import OpenAI
 from character_profile import (
     CharacterConfigStore,
     build_generation_payload,
@@ -28,6 +33,23 @@ from character_profile import (
     merge_character_config,
     list_presets,
 )
+
+# ── 环境配置 ─────────────────────────────────────────────
+load_dotenv()
+KIMI_API_KEY = os.getenv("KIMI_API_KEY", "")
+KIMI_MODEL = os.getenv("KIMI_MODEL", "moonshot-v1-8k")
+
+# OpenAI 兼容客户端（指向 Kimi / Moonshot）
+kimi_client = None
+if KIMI_API_KEY and KIMI_API_KEY != "your_key_here":
+    kimi_client = OpenAI(
+        api_key=KIMI_API_KEY,
+        base_url="https://api.moonshot.cn/v1",
+    )
+
+# 会话历史：{ session_id: [{"role":..., "content":...}, ...] }
+SESSION_HISTORY: Dict[str, List[Dict[str, str]]] = {}
+MAX_HISTORY = 20  # 保留最近 20 条消息
 
 app = FastAPI(title="Fitness Agent")
 app.add_middleware(
@@ -161,22 +183,88 @@ async def _broadcast_room(room_id: str):
 
 @app.post("/agent")
 def chat(req: ChatRequest):
-    msg = req.message.strip()
+    """AI 聊天 Agent：调用 Kimi API（兼容 OpenAI 格式）"""
+    msg = req.message.strip() or "你好"
     ctx = req.context or {}
+    session = req.session or "fitness-train"
+
+    # 构建系统提示词，融入当前运动上下文
     exercise = ctx.get("exercise", "当前动作")
     tip = ctx.get("tip", "注意动作标准")
     pose_match = ctx.get("poseMatch", 0)
+    style = ctx.get("style", "coach")
 
-    if any(k in msg for k in ("累", "疲", "不行")):
-        reply = "慢一点没关系，调整呼吸，我陪你做完这一组。"
-    elif any(k in msg for k in ("怎么", "标准", "动作")):
-        reply = f"关于{exercise}：{tip}"
-    elif any(k in msg for k in ("同步", "跟上", "相似")):
-        reply = f"当前同步率约 {pose_match}%，继续保持节奏。"
+    system_prompt = (
+        "你是「元气共跳」健身操运动陪伴系统的 AI 教练。"
+        "你的风格是友善、鼓励、简洁，说话像一位充满活力的健身伙伴。"
+        "回复控制在 80 字以内，多用鼓励的语气。\n\n"
+        f"当前运动：{exercise}\n"
+        f"训练提示：{tip}\n"
+        f"动作同步率：{pose_match}%\n"
+        f"风格模式：{'🧘 教练模式（专业鼓励）' if style == 'coach' else '🎉 娱乐模式（活泼有趣）'}"
+    )
+
+    # 获取 / 初始化会话历史
+    history = SESSION_HISTORY.setdefault(session, [])
+    if not history:
+        history.append({"role": "system", "content": system_prompt})
     else:
-        reply = f"收到。咱们专注{exercise}，{tip}"
+        # 更新 system prompt（最新的上下文）
+        history[0] = {"role": "system", "content": system_prompt}
 
-    return {"reply": reply}
+    history.append({"role": "user", "content": msg})
+
+    # 如果未配置 API Key，降级到本地回复
+    if not kimi_client:
+        reply = local_chat_reply(msg, ctx)
+        history.append({"role": "assistant", "content": reply})
+        if len(history) > MAX_HISTORY:
+            # 保留 system 和最近的消息
+            history[:] = [history[0]] + history[-(MAX_HISTORY - 1):]
+        return {"reply": reply, "provider": "local", "session": session}
+
+    # 调用 Kimi API
+    try:
+        resp = kimi_client.chat.completions.create(
+            model=KIMI_MODEL,
+            messages=history,
+            temperature=0.7,
+            max_tokens=300,
+        )
+        reply = resp.choices[0].message.content or ""
+    except Exception as e:
+        reply = f"（AI 暂时走神了，让我用本地知识回复你）"
+        print(f"[Kimi API Error] {e}")
+
+    history.append({"role": "assistant", "content": reply})
+    # 裁剪历史，防止过长
+    if len(history) > MAX_HISTORY:
+        history[:] = [history[0]] + history[-(MAX_HISTORY - 1):]
+
+    return {"reply": reply, "provider": "kimi", "model": KIMI_MODEL, "session": session}
+
+
+def local_chat_reply(message: str, ctx: dict) -> str:
+    """本地降级回复（无 API Key 时使用）"""
+    m = message.strip()
+    exercise = ctx.get("exercise", "当前动作")
+    tip = ctx.get("tip", "注意动作标准")
+    pose_match = ctx.get("poseMatch", 0)
+    style = ctx.get("style", "coach")
+
+    if any(k in m for k in ("累", "疲", "不行", "坚持不住")):
+        return "累了就慢一点，调整呼吸，我陪你做完这一组。"
+    if any(k in m for k in ("完成", "结束", "好了")):
+        return "太棒了！记得拉伸放松，明天继续加油！"
+    if any(k in m for k in ("怎么", "标准", "动作")):
+        return f"关于{exercise}：{tip}"
+    if any(k in m for k in ("相似", "同步", "跟上")):
+        return f"当前同步率约 {pose_match}%，继续保持节奏！"
+    if any(k in m for k in ("加油", "鼓励", "棒")):
+        return "干得漂亮！保持这个状态，你是最棒的！"
+    if style == "fun":
+        return "收到！咱们继续跳起来～ 💃"
+    return "我在呢，跟着我的节奏一起练。💪"
 
 
 @app.post("/animate")

@@ -623,19 +623,57 @@ function addAiMessage(text, role = "ai") {
   container.scrollTop = container.scrollHeight;
 }
 
-function handleChatInput(text) {
+async function handleChatInput(text) {
   if (!text.trim()) return;
   addAiMessage(text.trim(), "user");
 
-  let reply;
-  if (/累|疲|不行|坚持不住/.test(text)) {
-    reply = AI_RESPONSES[state.aiStyle].tired;
-  } else if (/完成|结束|好了/.test(text)) {
-    reply = AI_RESPONSES[state.aiStyle].done;
-  } else if (/加油|鼓励|棒/.test(text)) {
-    reply = getAiLine("encourage");
-  } else {
-    reply = AI_RESPONSES[state.aiStyle].default;
+  // 声明在 try 外部，确保 setTimeout 能访问到
+  let reply = "";
+  let usedApi = false;
+
+  try {
+    const ctx = {
+      exercise: state.currentExercise || state.workout?.[state.currentStep]?.name || "当前动作",
+      tip: state.currentTip || "注意动作标准",
+      poseMatch: state.poseMatch ?? 0,
+      style: state.aiStyle || "coach",
+    };
+    const endpoints = location.protocol === "file:"
+      ? ["http://localhost:8766/agent"]
+      : [`http://${location.hostname}:8766/agent`, "/agent"];
+
+    for (const endpoint of endpoints) {
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: text.trim(),
+            context: ctx,
+            session: "fitness-train",
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          reply = data.reply || data.message || "";
+          usedApi = true;
+          break;
+        }
+      } catch (_) { /* 尝试下一个端点 */ }
+    }
+  } catch (_) { /* fetch 整体异常 */ }
+
+  if (!usedApi || !reply) {
+    // 降级到本地回复
+    if (/累|疲|不行|坚持不住/.test(text)) {
+      reply = AI_RESPONSES[state.aiStyle].tired;
+    } else if (/完成|结束|好了/.test(text)) {
+      reply = AI_RESPONSES[state.aiStyle].done;
+    } else if (/加油|鼓励|棒/.test(text)) {
+      reply = getAiLine("encourage");
+    } else {
+      reply = AI_RESPONSES[state.aiStyle].default;
+    }
   }
 
   setTimeout(() => addAiMessage(reply, "ai"), 360);
@@ -1658,10 +1696,10 @@ function init() {
   document.getElementById("btn-regenerate")?.addEventListener("click", regenerateWorkout);
   document.getElementById("btn-complete-step")?.addEventListener("click", completeStep);
 
-  document.getElementById("chat-form")?.addEventListener("submit", (e) => {
+  document.getElementById("chat-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const input = document.getElementById("chat-input");
-    handleChatInput(input?.value || "");
+    await handleChatInput(input?.value || "");
     if (input) input.value = "";
   });
 
