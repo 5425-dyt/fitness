@@ -338,6 +338,69 @@ const TrainMode = (() => {
       set("wizard-voice-style", character.voice?.style);
     }
 
+    function imageToAvatarConfig(dataUrl, image) {
+      const canvas = document.createElement("canvas");
+      const size = 48;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(image, 0, 0, size, size);
+      const data = ctx.getImageData(0, 0, size, size).data;
+      let r = 0, g = 0, b = 0, count = 0;
+      for (let i = 0; i < data.length; i += 16) {
+        if (data[i + 3] < 40) continue;
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+        count++;
+      }
+      const toHex = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0");
+      const main = count ? `#${toHex(r / count)}${toHex(g / count)}${toHex(b / count)}` : "#f5c6a0";
+      const config = readWizardConfig();
+      config.source = "photo-2d-human";
+      config.referenceImage = dataUrl;
+      config.species = "human-2d";
+      config.style = "sporty";
+      config.colors = {
+        ...config.colors,
+        fur: main,
+        belly: "#fff3df",
+        ears: main,
+        paws: main,
+        tail: main,
+        clothes: document.getElementById("wizard-clothes-color")?.value || "#4f8f62",
+      };
+      config.body = { ...config.body, ears: "human", tail: "none", size: "standard" };
+      config.clothes = { ...config.clothes, type: "sportswear", color: config.colors.clothes };
+      config.capabilities = ["pose-landmarks", "social-square", "voice-companion", "photo-derived-2d"];
+      return config;
+    }
+
+    function bindPhotoAvatarMaker() {
+      const input = document.getElementById("avatar-photo-input");
+      const photoStatus = document.getElementById("avatar-photo-status");
+      input?.addEventListener("change", () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const image = new Image();
+          image.onload = async () => {
+            const config = imageToAvatarConfig(reader.result, image);
+            setWizardFromCharacter(config);
+            applyCharacterPreview(config);
+            CharacterProfileStore.save({ character_id: `photo-${Date.now()}`, character: config });
+            await CharacterProfileStore.saveCharacter?.(config);
+            if (photoStatus) photoStatus.textContent = "已生成二维人物，并同步到训练/运动广场";
+            showToast("二维人物形象已生成");
+            VoiceAgent.speak?.("你的二维运动形象已经生成，可以进入运动广场跟随动作了。");
+          };
+          image.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
     function wireWizardLivePreview() {
       document.querySelectorAll(".wizard-step input, .wizard-step select").forEach((el) => {
         el.addEventListener("input", () => applyCharacterPreview(readWizardConfig()));
@@ -352,6 +415,7 @@ const TrainMode = (() => {
     const existingCharacter = CharacterProfileStore.getCharacter?.();
     if (existingCharacter) setWizardFromCharacter(existingCharacter);
     applyCharacterPreview(readWizardConfig());
+    bindPhotoAvatarMaker();
 
     btnGen?.addEventListener('click', async () => {
       const existingProfile = CharacterProfileStore.load();
@@ -473,7 +537,7 @@ const TrainMode = (() => {
     bindVideoTeaching();
     bindPhotoAnimate();
     if (!CharacterProfileStore.getProfileId?.()) {
-      document.querySelector('.sidebar-tab[data-tab="ai"]')?.click();
+      showToast("可在“我的”上传照片生成 AI 陪伴形象");
     }
 
     document.getElementById("btn-enter-immersive")?.addEventListener("click", enter);

@@ -867,6 +867,249 @@ body {
   gap: 10px;
 }
 
+.movement-assist-card,
+.movement-report-card,
+.service-blueprint-card,
+.photo-avatar-maker {
+  background: rgba(255, 251, 240, 0.82);
+  border: 1px solid rgba(92, 127, 83, 0.16);
+}
+
+.assist-tags,
+.report-grid,
+.blueprint-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.assist-tags {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.assist-tags span,
+.api-contract-note {
+  border-radius: 14px;
+  background: rgba(92, 127, 83, 0.1);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.report-grid {
+  grid-template-columns: repeat(3, 1fr);
+  margin: 10px 0;
+}
+
+.report-grid div,
+.blueprint-grid div {
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(92, 127, 83, 0.12);
+  padding: 12px;
+}
+
+.report-grid strong,
+.blueprint-grid strong {
+  display: block;
+  color: var(--primary);
+  font-size: 1.05rem;
+}
+
+.report-grid span,
+.blueprint-grid span,
+.photo-avatar-maker span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.blueprint-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.blueprint-grid p,
+.movement-report-card p,
+.photo-avatar-maker p {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  margin: 6px 0 0;
+}
+
+.api-contract-note {
+  margin-top: 12px;
+  text-align: left;
+  line-height: 1.6;
+}
+
+.photo-avatar-maker {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  border-radius: 20px;
+  padding: 12px;
+  margin: 12px 0;
+}
+
+.photo-avatar-maker span {
+  grid-column: 1 / -1;
+}
+
+.home-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.movement-assist-inline {
+  margin: 10px 0 14px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.train-launcher--primary {
+  margin-bottom: 12px;
+}
+
+.training-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.training-flow span {
+  border-radius: 16px;
+  background: rgba(79, 159, 100, 0.1);
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.training-flow b {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 4px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.72rem;
+}
+
+.train-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.training-options {
+  margin-bottom: 12px;
+}
+
+.training-options .training-library,
+.training-options .video-upload-zone {
+  margin-top: 12px;
+}
+
+.ai-in-workout {
+  display: grid;
+  gap: 12px;
+}
+
+.ai-in-workout__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.voice-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.voice-log {
+  max-height: 150px;
+  overflow-y: auto;
+  border-radius: 16px;
+  background: rgba(92, 127, 83, 0.08);
+  border: 1px solid rgba(92, 127, 83, 0.14);
+  padding: 10px;
+}
+
+.voice-log__item {
+  width: fit-content;
+  max-width: 88%;
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-radius: 14px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.voice-log__item--ai {
+  background: #fffaf0;
+  color: var(--text);
+}
+
+.voice-log__item--user {
+  margin-left: auto;
+  background: var(--primary);
+  color: #fff;
+}
+
+.ai-chat__input--inline {
+  grid-column: auto;
+}
+
+.compact-details {
+  padding: 14px 16px;
+}
+
+.compact-details summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 800;
+  list-style: none;
+}
+
+.compact-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.compact-details summary::after {
+  content: "展开";
+  float: right;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.compact-details[open] summary::after {
+  content: "收起";
+}
+
+.avatar-custom--compact {
+  display: block;
+}
+
+.avatar-custom--compact .avatar-preview-box {
+  min-height: 180px;
+}
+
+.profile-data-compact {
+  margin-top: 12px;
+}
+
 .profile-field--full {
   grid-column: 1 / -1;
 }
@@ -1322,7 +1565,7 @@ body {
   width: min(100vw, 430px);
   z-index: 30;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 0;
   background: rgba(16, 24, 36, 0.95);
   border-top: 1px solid rgba(255, 255, 255, 0.08);

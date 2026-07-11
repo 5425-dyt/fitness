@@ -183,6 +183,14 @@ const state = {
   minutes: 25,
   checkedIn: localStorage.getItem("fitness-home-checked-in") === "1",
   selectedTrainingId: localStorage.getItem("fitness-selected-training") || "fat-burn",
+  sessionStartAt: 0,
+  lastReport: (() => {
+    try {
+      return JSON.parse(localStorage.getItem("fitness-last-movement-report") || "null");
+    } catch (_) {
+      return null;
+    }
+  })(),
   aiStyle: "warm",
   profile: loadUserProfile(),
   social: {
@@ -401,6 +409,7 @@ function applySelectedTraining(trainingId, showMsg = false) {
   state.currentStep = 0;
   localStorage.setItem("fitness-selected-training", item.id);
   renderTrainingLibrary();
+  renderMovementAssist();
   renderWorkoutPreview();
   renderTimeline();
   if (showMsg) showToast(`已选择：${item.title}`);
@@ -424,6 +433,7 @@ function renderTrainingLibrary() {
   const desc = document.getElementById("train-selected-desc");
   if (title) title.textContent = `已选择：${selected.title}`;
   if (desc) desc.textContent = selected.desc;
+  renderMovementAssist();
 }
 
 function bindTrainPageVideoUpload() {
@@ -476,6 +486,7 @@ function bindTrainPageVideoUpload() {
 function completeStep() {
   const workout = state.workout;
   if (state.currentStep >= workout.length) return;
+  if (!state.sessionStartAt) state.sessionStartAt = Date.now();
 
   state.currentStep++;
   state.points += 15;
@@ -485,16 +496,81 @@ function completeStep() {
   const responses = AI_RESPONSES[state.aiStyle].encourage;
   const msg = responses[Math.floor(Math.random() * responses.length)];
   addAiMessage(msg, "ai");
-  const home = document.getElementById("ai-message-home");
-  if (home) home.textContent = msg;
 
   if (state.currentStep >= workout.length) {
     showToast("恭喜完成今日训练！");
     addAiMessage(AI_RESPONSES[state.aiStyle].done, "ai");
     if (typeof Avatar !== "undefined") Avatar.setPose("stretch");
+    generateMovementReport("single-training");
   }
 
   renderTimeline();
+}
+
+function movementWarmupTip(training = getSelectedTraining()) {
+  if (training.goal === "flexibility") return "先做 1 分钟肩颈和髋部活动，动作保持慢速。";
+  if (training.goal === "cardio") return "先做 2 分钟原地踏步和肩部环绕，逐步升高心率。";
+  return "先做 2 分钟动态热身，膝盖微屈，避免一上来跳太猛。";
+}
+
+function movementStretchTip(training = getSelectedTraining()) {
+  if (training.goal === "flexibility") return "结束后保持深呼吸，做 1 分钟下背部放松。";
+  if (training.goal === "cardio") return "结束后做小腿、股四头肌和髋屈肌拉伸各 20 秒。";
+  return "结束后做大腿后侧、臀部和肩背拉伸，帮助恢复。";
+}
+
+function renderMovementAssist() {
+  const copy = document.getElementById("movement-assist-copy");
+  if (!copy) return;
+  const training = getSelectedTraining();
+  copy.textContent = `${training.title}：${movementWarmupTip(training)} 结束后：${movementStretchTip(training)}`;
+}
+
+function generateMovementReport(type = "single-training") {
+  const training = getSelectedTraining();
+  const durationSec = state.sessionStartAt ? Math.max(30, Math.round((Date.now() - state.sessionStartAt) / 1000)) : Math.max(60, state.currentStep * 120);
+  const matchText = document.getElementById("stat-match")?.textContent || "78%";
+  const cameraMotion = typeof Camera !== "undefined" ? Camera.getMotionLevel?.() : 0;
+  const motion = Math.round((socialMotion || cameraMotion || 0.35) * 100);
+  const report = {
+    id: Date.now(),
+    type,
+    title: type === "social-cojump" ? "社交共跳报告" : `${training.title}训练报告`,
+    durationSec,
+    completed: type === "social-cojump" ? socialJumpCount : state.currentStep,
+    sync: type === "social-cojump" ? `${Math.max(45, motion)}%` : matchText,
+    warmupTip: movementWarmupTip(training),
+    stretchTip: movementStretchTip(training),
+    advice: motion < 45 ? "动作幅度偏小，下次可以站远一点，保证全身入镜。" : "整体节奏不错，继续保持稳定呼吸和动作标准。",
+  };
+  state.lastReport = report;
+  localStorage.setItem("fitness-last-movement-report", JSON.stringify(report));
+  renderMovementReport();
+  state.sessionStartAt = 0;
+  showToast("运动报告已生成");
+  VoiceAgent.speak?.("运动报告已生成，记得做拉伸放松。");
+}
+
+function renderMovementReport() {
+  const el = document.getElementById("movement-report");
+  if (!el) return;
+  const r = state.lastReport;
+  if (!r) {
+    el.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem">暂无报告，完成一次训练或共跳后会在这里显示。</p>`;
+    return;
+  }
+  const minutes = Math.floor(r.durationSec / 60);
+  const seconds = String(r.durationSec % 60).padStart(2, "0");
+  el.innerHTML = `
+    <div class="report-grid">
+      <div><strong>${minutes}:${seconds}</strong><span>运动时长</span></div>
+      <div><strong>${r.completed}</strong><span>${r.type === "social-cojump" ? "跳跃/动作" : "完成动作"}</span></div>
+      <div><strong>${r.sync}</strong><span>同步/匹配</span></div>
+    </div>
+    <p><b>热身：</b>${r.warmupTip}</p>
+    <p><b>拉伸：</b>${r.stretchTip}</p>
+    <p><b>建议：</b>${r.advice}</p>
+  `;
 }
 
 function updateStats() {
@@ -614,10 +690,12 @@ function getAiLine(type) {
 }
 
 function addAiMessage(text, role = "ai") {
-  const container = document.getElementById("chat-messages");
+  const container = document.getElementById("chat-messages") || document.querySelector(".js-voice-log");
   if (!container) return;
   const div = document.createElement("div");
-  div.className = `chat-msg chat-msg--${role}`;
+  div.className = container.id === "voice-log"
+    ? `voice-log__item voice-log__item--${role}`
+    : `chat-msg chat-msg--${role}`;
   div.textContent = text;
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
@@ -625,58 +703,22 @@ function addAiMessage(text, role = "ai") {
 
 async function handleChatInput(text) {
   if (!text.trim()) return;
-  addAiMessage(text.trim(), "user");
-
-  // 声明在 try 外部，确保 setTimeout 能访问到
-  let reply = "";
-  let usedApi = false;
-
-  try {
-    const ctx = {
-      exercise: state.currentExercise || state.workout?.[state.currentStep]?.name || "当前动作",
-      tip: state.currentTip || "注意动作标准",
-      poseMatch: state.poseMatch ?? 0,
-      style: state.aiStyle || "coach",
-    };
-    const endpoints = location.protocol === "file:"
-      ? ["http://localhost:8766/agent"]
-      : [`http://${location.hostname}:8766/agent`, "/agent"];
-
-    for (const endpoint of endpoints) {
-      try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: text.trim(),
-            context: ctx,
-            session: "fitness-train",
-          }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          reply = data.reply || data.message || "";
-          usedApi = true;
-          break;
-        }
-      } catch (_) { /* 尝试下一个端点 */ }
-    }
-  } catch (_) { /* fetch 整体异常 */ }
-
-  if (!usedApi || !reply) {
-    // 降级到本地回复
-    if (/累|疲|不行|坚持不住/.test(text)) {
-      reply = AI_RESPONSES[state.aiStyle].tired;
-    } else if (/完成|结束|好了/.test(text)) {
-      reply = AI_RESPONSES[state.aiStyle].done;
-    } else if (/加油|鼓励|棒/.test(text)) {
-      reply = getAiLine("encourage");
-    } else {
-      reply = AI_RESPONSES[state.aiStyle].default;
-    }
-  }
-
-  setTimeout(() => addAiMessage(reply, "ai"), 360);
+  const message = text.trim();
+  addAiMessage(message, "user");
+  const ex = state.workout?.[state.currentStep];
+  const context = {
+    exercise: state.currentExercise || ex?.name || "当前动作",
+    tip: state.currentTip || ex?.tip || "注意动作标准",
+    style: state.aiStyle || "coach",
+    userProfile: state.profile,
+    poseMatch: state.poseMatch ?? parseInt(document.getElementById("stat-match")?.textContent || "0", 10) || 0,
+    motionLevel: typeof Camera !== "undefined" ? Camera.getMotionLevel?.() ?? 0 : socialMotion,
+  };
+  const reply = typeof VoiceAgent !== "undefined"
+    ? await VoiceAgent.callAgent(message, context)
+    : AI_RESPONSES[state.aiStyle].default;
+  addAiMessage(reply, "ai");
+  VoiceAgent.speak?.(reply);
 }
 
 function socialApiCandidates(path) {
@@ -1110,6 +1152,9 @@ async function leaveSocialRoom() {
     // ignore network error when leaving
   }
   disconnectSocialSocket();
+  if (socialJumpCount > 0 || socialMotion > 0.08) {
+    generateMovementReport("social-cojump");
+  }
   stopSocialCamera();
   state.social.currentRoom = null;
   state.social.relayIndex = -1;
@@ -1348,6 +1393,8 @@ function drawSocialStagePoseCanvas(room) {
 
   const members = room.members || [];
   const count = Math.max(1, members.length);
+  const currentCharacter = CharacterProfileStore.getCharacter?.() || {};
+  const localAvatarColor = currentCharacter.colors?.clothes || currentCharacter.colors?.fur || "#4f8f62";
   members.forEach((m, idx) => {
     const slotW = Math.min(190, Math.max(112, rect.width / (count + 1) * 0.88));
     const slotH = Math.min(rect.height * 0.74, slotW * 1.55);
@@ -1360,10 +1407,15 @@ function drawSocialStagePoseCanvas(room) {
     if (realLandmarks) {
       ctx.save();
       ctx.translate(x, y);
-      SkeletonAvatar.draw(ctx, realLandmarks, slotW, slotH, { mirror: true, wireframe: true });
+      if (m.user_id === state.social.userId && currentCharacter.source === "photo-2d-human") {
+        const skeleton = socialSkeletonFromLandmarks(realLandmarks);
+        drawSocialStageStickFigure(ctx, skeleton, 0, 0, slotW, slotH, localAvatarColor, "二维形象", score);
+      } else {
+        SkeletonAvatar.draw(ctx, realLandmarks, slotW, slotH, { mirror: true, wireframe: true });
+      }
       ctx.restore();
       ctx.save();
-      ctx.fillStyle = m.user_id === state.social.userId ? "#7df1df" : (m.color || "#eaf4ff");
+      ctx.fillStyle = m.user_id === state.social.userId ? localAvatarColor : (m.color || "#eaf4ff");
       ctx.font = "700 12px sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(`${m.name} · ${score}%`, x + slotW / 2, y - 10);
@@ -1372,7 +1424,7 @@ function drawSocialStagePoseCanvas(room) {
     }
     const pose = SOCIAL_FALLBACK_SKELETONS[m.pose] ? m.pose : "idle";
     const skeleton = Object.keys(m.skeleton || {}).length ? m.skeleton : animatedSocialFallbackSkeleton(pose, m.motion_level || 0);
-    const color = m.user_id === state.social.userId ? "#7df1df" : (m.color || "#6ea8fe");
+    const color = m.user_id === state.social.userId ? localAvatarColor : (m.color || "#6ea8fe");
     drawSocialStageStickFigure(ctx, skeleton, x, y, slotW, slotH, color, m.name, score);
   });
 }
@@ -1448,29 +1500,81 @@ function loopSocialMotion() {
   socialRaf = requestAnimationFrame(loopSocialMotion);
 }
 
+function handleSocialCameraFrame(frame) {
+  const lm = frame.landmarks || null;
+  const frameMotion = frame.motionLevel || 0;
+
+  if (lm && lm.length > 16) {
+    socialLastLandmarks = lm;
+    drawSocialLocalPose(lm);
+    const y1 = lm[11]?.y;
+    const y2 = lm[12]?.y;
+    if (typeof y1 === "number" && typeof y2 === "number") {
+      const y = (y1 + y2) / 2;
+      if (socialLastShoulderY !== null) {
+        const delta = socialLastShoulderY - y;
+        const now = Date.now();
+        if (delta > 0.028 && now - socialLastJumpTs > 300) {
+          socialJumpCount++;
+          socialLastJumpTs = now;
+        }
+        socialMotion = socialMotion * 0.78 + Math.min(1, Math.abs(delta) * 20 + frameMotion * 0.65 + 0.08) * 0.22;
+      }
+      socialLastShoulderY = y;
+    }
+    setSocialDetectBadge("MediaPipe 骨架识别中", "live");
+  } else {
+    drawSocialLocalPose(null);
+    const now = Date.now();
+    if (frameMotion > 0.42 && now - socialLastJumpTs > 420) {
+      socialJumpCount++;
+      socialLastJumpTs = now;
+    }
+    socialMotion = socialMotion * 0.82 + frameMotion * 0.18;
+    setSocialDetectBadge(frameMotion > 0.08 ? "基础动作识别中" : "等待动作", frameMotion > 0.08 ? "fallback" : "idle");
+  }
+
+  if (state.social.currentRoom) drawSocialStagePoseCanvas(state.social.currentRoom);
+
+  if (Date.now() - socialLastMotionSendTs > 180) {
+    socialLastMotionSendTs = Date.now();
+    const pose = lm ? socialPoseTag(lm) : (socialMotion > 0.35 ? "jump" : socialMotion > 0.12 ? "run" : "idle");
+    const mediaPipeSkeleton = socialSkeletonFromLandmarks(lm);
+    const skeleton = Object.keys(mediaPipeSkeleton).length
+      ? mediaPipeSkeleton
+      : animatedSocialFallbackSkeleton(pose, socialMotion);
+    sendSocialSocket({
+      type: "motion_update",
+      motion_level: Number(socialMotion.toFixed(3)),
+      jump_count: socialJumpCount,
+      pose,
+      skeleton,
+      landmarks: simplifySocialLandmarks(lm),
+    });
+  }
+}
+
 async function startSocialCamera() {
   if (socialStream) return true;
   try {
     setSocialDetectBadge("正在打开摄像头", "idle");
-    socialStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 } },
-      audio: false,
-    });
-    const video = document.getElementById("social-local-video");
-    if (video) {
-      video.srcObject = socialStream;
-      await video.play();
-    }
-    document.getElementById("social-video-placeholder")?.classList.add("hidden");
-    await PoseEngine.init();
     socialLastShoulderY = null;
     socialJumpCount = 0;
     socialMotion = 0;
     socialPrevFrame = null;
     socialFallbackPhase = 0;
-    setSocialDetectBadge(PoseEngine.isReady?.() ? "MediaPipe 准备就绪" : "基础识别模式", PoseEngine.isReady?.() ? "live" : "fallback");
-    if (socialRaf) cancelAnimationFrame(socialRaf);
-    socialRaf = requestAnimationFrame(loopSocialMotion);
+    socialLastLandmarks = null;
+    socialStream = await CameraAPI.start({
+      videoId: "social-local-video",
+      facingMode: "user",
+      audio: false,
+      onFrame: handleSocialCameraFrame,
+      onStatus: ({ state: statusState, message }) => {
+        const mode = statusState === "live" ? "live" : statusState === "fallback" ? "fallback" : "idle";
+        setSocialDetectBadge(message, mode);
+      },
+    });
+    document.getElementById("social-video-placeholder")?.classList.add("hidden");
     return true;
   } catch (_) {
     setSocialDetectBadge("摄像头不可用", "error");
@@ -1484,14 +1588,12 @@ function stopSocialCamera() {
     cancelAnimationFrame(socialRaf);
     socialRaf = 0;
   }
-  if (socialStream) {
-    socialStream.getTracks().forEach((t) => t.stop());
-    socialStream = null;
-  }
-  const video = document.getElementById("social-local-video");
-  if (video) video.srcObject = null;
+  if (socialStream) CameraAPI.stop("social-local-video");
+  socialStream = null;
   socialPrevFrame = null;
   socialLastShoulderY = null;
+  socialLastLandmarks = null;
+  drawSocialLocalPose(null);
   setSocialDetectBadge("等待识别", "idle");
   document.getElementById("social-video-placeholder")?.classList.remove("hidden");
 }
@@ -1620,6 +1722,15 @@ async function bindSocialSquare() {
       showToast("共跳已开始");
     }
   });
+  document.getElementById("btn-social-voice")?.addEventListener("click", () => {
+    if (!VoiceAgent?.isListening?.()) {
+      VoiceAgent?.start?.();
+      showToast("语音陪伴已开启");
+      return;
+    }
+    VoiceAgent?.stop?.();
+    showToast("语音陪伴已关闭");
+  });
   document.getElementById("btn-social-relay")?.addEventListener("click", triggerRelayNext);
   document.getElementById("btn-social-record")?.addEventListener("click", toggleSocialRecord);
   document.getElementById("btn-social-add-choreo")?.addEventListener("click", addChoreographyStep);
@@ -1639,8 +1750,10 @@ function init() {
   renderCheckinReminder();
   renderCommunityFeed();
   renderTrainingLibrary();
+  renderMovementAssist();
+  renderMovementReport();
   bindTrainPageVideoUpload();
-  addAiMessage(AI_RESPONSES.warm.greeting, "ai");
+  addAiMessage("运动语音陪伴已就绪，训练中可以直接问动作、节奏和休息建议。", "ai");
 
   if (typeof Camera !== "undefined") Camera.init();
   if (typeof Avatar !== "undefined") Avatar.init();
@@ -1661,13 +1774,10 @@ function init() {
             const n = parseInt(t, 10);
             return Number.isNaN(n) ? 0 : n;
           })(),
-          motionLevel: Camera.getMotionLevel?.() ?? 0,
+          motionLevel: typeof Camera !== "undefined" ? Camera.getMotionLevel?.() ?? 0 : socialMotion,
         };
       },
-      onReply: (reply) => {
-        const home = document.getElementById("ai-message-home");
-        if (home) home.textContent = reply;
-      },
+      onReply: () => {},
     });
   }
 
@@ -1677,6 +1787,10 @@ function init() {
   document.getElementById("btn-ai-go-profile")?.addEventListener("click", () => switchTab("profile"));
 
   document.getElementById("btn-start")?.addEventListener("click", () => {
+    state.sessionStartAt = Date.now();
+    const tip = movementWarmupTip(getSelectedTraining());
+    showToast(tip);
+    VoiceAgent.speak?.(`准备开始训练。${tip}`);
     switchTab("train");
     setTimeout(() => TrainMode?.enter(), 150);
   });

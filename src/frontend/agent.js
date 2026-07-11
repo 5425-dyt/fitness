@@ -102,20 +102,22 @@ const VoiceAgent = (() => {
   }
 
   function appendLog(role, text) {
-    const box = document.getElementById("voice-log");
-    if (!box) return;
-    const div = document.createElement("div");
-    div.className = `voice-log__item voice-log__item--${role}`;
-    div.textContent = text;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
+    const boxes = document.querySelectorAll(".js-voice-log, #voice-log");
+    if (!boxes.length) return;
+    boxes.forEach((box) => {
+      const div = document.createElement("div");
+      div.className = `voice-log__item voice-log__item--${role}`;
+      div.textContent = text;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    });
   }
 
   function updateMicUI(active) {
-    const btn = document.getElementById("btn-voice-talk");
-    if (!btn) return;
-    btn.classList.toggle("voice-btn--active", active);
-    btn.textContent = active ? "聆听中…" : "按住说话";
+    document.querySelectorAll(".js-voice-talk, #btn-voice-talk").forEach((btn) => {
+      btn.classList.toggle("voice-btn--active", active);
+      btn.textContent = active ? "聆听中…" : "按住说话";
+    });
   }
 
   function startListening() {
@@ -141,26 +143,26 @@ const VoiceAgent = (() => {
   }
 
   function bindUI() {
-    const btn = document.getElementById("btn-voice-talk");
+    const buttons = document.querySelectorAll(".js-voice-talk, #btn-voice-talk");
     const endpointInput = document.getElementById("agent-endpoint");
     if (endpointInput) endpointInput.value = getEndpoint();
 
     endpointInput?.addEventListener("change", (e) => setEndpoint(e.target.value.trim()));
 
-    if (!btn) return;
+    buttons.forEach((btn) => {
+      btn.addEventListener("mousedown", startListening);
+      btn.addEventListener("mouseup", stopListening);
+      btn.addEventListener("mouseleave", stopListening);
+      btn.addEventListener("touchstart", (e) => { e.preventDefault(); startListening(); });
+      btn.addEventListener("touchend", (e) => { e.preventDefault(); stopListening(); });
+    });
 
-    btn.addEventListener("mousedown", startListening);
-    btn.addEventListener("mouseup", stopListening);
-    btn.addEventListener("mouseleave", stopListening);
-    btn.addEventListener("touchstart", (e) => { e.preventDefault(); startListening(); });
-    btn.addEventListener("touchend", (e) => { e.preventDefault(); stopListening(); });
-
-    document.getElementById("btn-voice-speak-tip")?.addEventListener("click", () => {
+    document.querySelectorAll(".js-voice-speak-tip, #btn-voice-speak-tip").forEach((btn) => btn.addEventListener("click", () => {
       const ctx = contextProvider();
       const tip = ctx.tip || "准备好啦，我们一起开始！";
       speak(tip);
       appendLog("ai", tip);
-    });
+    }));
   }
 
   function init(options = {}) {
@@ -280,6 +282,8 @@ const VoiceAgent = (() => {
     uploadPhoto,
     createCharacterProfile,
     generateWithProfile,
+    start: startListening,
+    stop: stopListening,
     isListening: () => listening,
   };
 })();

@@ -29,21 +29,12 @@
     <main class="main">
       <!-- 首页概览 -->
       <section class="panel panel--active" id="panel-home">
-        <div class="checkin-reminder" id="home-checkin-reminder">
-          <div>
-            <span class="hero__badge">今日提醒</span>
-            <h3>今天还没有完成运动打卡</h3>
-            <p id="home-checkin-copy">完成一次训练或共跳后，来这里打卡记录你的坚持。</p>
-          </div>
-          <button class="btn btn--primary btn--sm" id="btn-home-checkin" type="button">立即打卡</button>
-        </div>
-
         <div class="hero">
           <div class="hero__content">
-            <span class="hero__badge">社交共跳版</span>
-            <h2 class="hero__heading">先找房间，一起动起来！</h2>
-            <p class="hero__desc">主流程改为：完善个人资料和 AI 形象 → 进入社交广场共跳 → 需要时使用单人训练和 AI 聊天。</p>
-            <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <span class="hero__badge">运动广场优先</span>
+            <h2 class="hero__heading">进入房间，一起运动</h2>
+            <p class="hero__desc">首页只保留核心入口：共跳、单人训练和今日状态。</p>
+            <div class="home-actions">
               <button class="btn btn--primary btn--lg" id="btn-start-social">进入社交广场</button>
               <button class="btn btn--secondary btn--lg" id="btn-start">单人训练</button>
             </div>
@@ -63,89 +54,81 @@
             </div>
           </div>
         </div>
-
-        <div class="grid-2">
-          <article class="card">
-            <h3 class="card__title">今日训练计划</h3>
-            <p class="card__meta">轻度有氧 · 约 15 分钟 · 适合初学者</p>
-            <ul class="workout-list" id="workout-preview"></ul>
-          </article>
-          <article class="card card--ai">
-            <h3 class="card__title">AI 小伴说</h3>
-            <div class="ai-bubble">
-              <div class="ai-avatar">🤖</div>
-              <p class="ai-message" id="ai-message-home">准备好啦！今天我们从热身开始，动作慢慢来，我会一直陪着你～</p>
-            </div>
-          </article>
-        </div>
-
-        <div class="section-head section-head--feed">
-          <h2>社群分享</h2>
-          <p>看看大家上传的编舞、训练心得和共跳片段</p>
-        </div>
-        <div class="community-feed" id="community-feed"></div>
       </section>
 
       <!-- 训练入口 -->
       <section class="panel" id="panel-train">
         <div class="section-head">
           <h2>训练</h2>
-          <p>先选择训练内容，也可以上传视频拆解跟练；进入训练后只需要跟随完成。</p>
+          <p>优先一键开始，系统自动安排热身、跟练和拉伸。</p>
         </div>
 
-        <div class="training-picker">
-          <article class="card">
-            <h3 class="card__title">训练库</h3>
-            <p class="card__meta">选择本次要练的内容</p>
-            <div class="training-library" id="training-library"></div>
-          </article>
-
-          <article class="card">
-            <h3 class="card__title">上传视频跟练</h3>
-            <p class="card__meta">上传一个动作视频，系统会先拆解姿态，再由虚拟伙伴带你跟练</p>
-            <label class="video-upload-zone" id="train-page-video-zone">
-              <input type="file" id="train-page-video-input" accept="video/*" />
-              <span>点击上传运动视频</span>
-            </label>
-            <video id="train-page-video-preview" hidden controls style="width:100%;border-radius:14px;margin-top:12px;background:#000"></video>
-            <p id="train-page-video-info" style="font-size:0.8rem;color:var(--text-muted);margin-top:10px">等待上传</p>
-            <div class="teach-progress" style="margin-top:12px"><div class="teach-progress__fill" id="train-page-video-progress"></div></div>
-          </article>
-        </div>
-
-        <div class="train-launcher">
+        <div class="train-launcher train-launcher--primary">
           <h3 id="train-selected-title">已选择：今日推荐训练</h3>
           <p id="train-selected-desc">进入后系统会按动作顺序提示，你只需要跟着完成即可。</p>
-          <button class="btn btn--primary btn--lg" id="btn-enter-immersive" type="button">进入训练</button>
-        </div>
-      </section>
-
-      <!-- AI 陪伴 -->
-      <section class="panel" id="panel-ai">
-        <div class="section-head">
-          <h2>AI 陪伴</h2>
-          <p>一个内置聊天工具：训练建议、情绪鼓励、动作解释都在这里完成</p>
-        </div>
-
-        <div class="ai-chat ai-chat--tool">
-          <div class="ai-chat__companion">
-            <div class="companion-style">
-              <span>陪伴风格</span>
-              <div class="style-tags">
-                <button class="style-tag style-tag--active" data-style="warm">温暖鼓励</button>
-                <button class="style-tag" data-style="coach">严格教练</button>
-                <button class="style-tag" data-style="fun">轻松搞笑</button>
-              </div>
-            </div>
-            <p class="companion-hint"><strong data-avatar-name>跳跳</strong> 会根据你的个人资料、训练目标和共跳状态，给你建议和鼓励。</p>
-            <button class="btn btn--secondary btn--sm" id="btn-ai-go-profile" type="button">去我的页面修改资料和形象</button>
+          <p class="movement-assist-inline" id="movement-assist-copy">开始前先做 2 分钟动态热身，结束后自动提醒拉伸放松。</p>
+          <div class="training-flow">
+            <span><b>1</b> 热身提示</span>
+            <span><b>2</b> 摄像头跟练</span>
+            <span><b>3</b> 拉伸 + 报告</span>
           </div>
-          <div class="ai-chat__messages" id="chat-messages"></div>
-          <form class="ai-chat__input" id="chat-form">
-            <input type="text" id="chat-input" placeholder="和小伴说点什么…" autocomplete="off" />
+          <div class="train-actions">
+            <button class="btn btn--primary btn--lg" id="btn-enter-immersive" type="button">开始训练</button>
+          </div>
+        </div>
+
+        <details class="card compact-details training-options">
+          <summary>更换训练内容</summary>
+          <div class="training-library" id="training-library"></div>
+        </details>
+
+        <details class="card compact-details training-options">
+          <summary>上传视频生成跟练</summary>
+          <p class="card__meta">上传动作视频后，系统会拆解姿态并由虚拟伙伴带练。</p>
+          <label class="video-upload-zone" id="train-page-video-zone">
+            <input type="file" id="train-page-video-input" accept="video/*" />
+            <span>点击上传运动视频</span>
+          </label>
+          <video id="train-page-video-preview" hidden controls style="width:100%;border-radius:14px;margin-top:12px;background:#000"></video>
+          <p id="train-page-video-info" style="font-size:0.8rem;color:var(--text-muted);margin-top:10px">等待上传</p>
+          <div class="teach-progress" style="margin-top:12px"><div class="teach-progress__fill" id="train-page-video-progress"></div></div>
+        </details>
+
+        <details class="card ai-in-workout compact-details">
+          <summary>语音陪伴设置</summary>
+          <div class="ai-in-workout__head">
+            <div>
+              <h3 class="card__title">运动语音陪伴</h3>
+              <p class="card__meta">默认用语音触发，运动中不用跳出页面。</p>
+            </div>
+            <button class="btn btn--primary btn--sm js-voice-talk" type="button">按住说话</button>
+          </div>
+          <div class="companion-style">
+            <span>风格</span>
+            <div class="style-tags">
+              <button class="style-tag style-tag--active" data-style="warm">鼓励</button>
+              <button class="style-tag" data-style="coach">教练</button>
+              <button class="style-tag" data-style="fun">轻松</button>
+            </div>
+          </div>
+          <div class="voice-quick-actions">
+            <button class="btn btn--secondary btn--sm js-voice-speak-tip" type="button">播报当前提示</button>
+            <button class="btn btn--secondary btn--sm" id="btn-ai-go-profile" type="button">修改形象</button>
+          </div>
+          <div class="voice-log js-voice-log" aria-live="polite"></div>
+          <form class="ai-chat__input ai-chat__input--inline" id="chat-form">
+            <input type="text" id="chat-input" placeholder="可选：输入动作问题，例如“这个动作怎么做？”" autocomplete="off" />
             <button type="submit" class="btn btn--primary">发送</button>
           </form>
-        </div>
+        </details>
+
+        <article class="card movement-report-card">
+          <h3 class="card__title">最近运动报告</h3>
+          <p class="card__meta">训练或共跳结束后自动生成</p>
+          <div id="movement-report">
+            <p style="color:var(--text-muted);font-size:0.85rem">暂无报告，完成一次训练或共跳后会在这里显示。</p>
+          </div>
+        </article>
       </section>
 
       <!-- 社交广场 -->
@@ -233,6 +216,7 @@
               <h4>房间操作</h4>
               <div class="social-room-actions">
                 <button class="btn btn--primary btn--sm" id="btn-social-start" type="button">开始共跳</button>
+                <button class="btn btn--secondary btn--sm" id="btn-social-voice" type="button">语音陪伴</button>
                 <button class="btn btn--secondary btn--sm" id="btn-social-relay" type="button">下一棒</button>
                 <button class="btn btn--secondary btn--sm" id="btn-social-record" type="button">开始录屏</button>
                 <button class="btn btn--secondary btn--sm" id="btn-social-leave" type="button">退出房间</button>
@@ -358,49 +342,54 @@
           </form>
         </article>
 
+        <details class="card service-blueprint-card compact-details">
+          <summary>服务蓝图与陪伴机制</summary>
+          <div class="blueprint-grid">
+            <div>
+              <strong>新用户</strong>
+              <span>注册/首次进入</span>
+              <p>一次性填写基础信息，上传照片或选择预设生成二维形象，直接进入运动广场。</p>
+            </div>
+            <div>
+              <strong>老用户</strong>
+              <span>再次打开</span>
+              <p>一键调用常用运动方案和历史形象，不满意时让 AI 重新生成训练组合。</p>
+            </div>
+            <div>
+              <strong>运动中</strong>
+              <span>隐性陪伴</span>
+              <p>手机摄像头采集姿态，二维形象跟随运动轨迹，语音提示热身、休息和纠错。</p>
+            </div>
+            <div>
+              <strong>运动后</strong>
+              <span>报告留存</span>
+              <p>自动生成运动时长、同步率、动作建议、拉伸提醒，作为下次推荐依据。</p>
+            </div>
+          </div>
+          <div class="api-contract-note">
+            <b>标准接口：</b><code>CameraAPI.start({ videoId, onFrame, onStatus })</code> 输出 <code>{ landmarks, motionLevel, timestamp, source }</code>，房间同步使用 <code>motion_update</code>。
+          </div>
+        </details>
+
         <article class="card">
-          <h3 class="card__title">我的 AI 陪伴形象</h3>
-          <p class="card__meta">基础外观和高级 Wizard 合并在这里，统一管理你在训练、社交共跳和聊天中使用的 AI 伙伴</p>
-          <div class="avatar-custom">
+          <h3 class="card__title">AI 陪伴形象</h3>
+          <p class="card__meta">上传照片生成二维形象；需要细调时展开高级配置。</p>
+          <div class="photo-avatar-maker">
+            <div>
+              <strong>照片生成二维形象</strong>
+              <p>用于训练和运动广场的姿态驱动人物。</p>
+            </div>
+            <label class="btn btn--secondary btn--sm" for="avatar-photo-input">选择照片</label>
+            <input id="avatar-photo-input" type="file" accept="image/*" hidden />
+            <span id="avatar-photo-status">未选择照片</span>
+          </div>
+          <div class="avatar-custom avatar-custom--compact">
             <div id="avatar-preview" class="avatar-preview-box" aria-label="小伙伴预览"></div>
-            <form class="avatar-form" id="avatar-form">
-              <label class="avatar-field">
-                小伙伴昵称
-                <input type="text" id="avatar-name" maxlength="8" placeholder="跳跳" />
-              </label>
-              <label class="avatar-field">
-                物种
-                <select id="avatar-animal">
-                  <option value="bunny" selected>小兔子 🐰</option>
-                  <option value="cat">小猫咪 🐱</option>
-                  <option value="bear">小熊熊 🐻</option>
-                </select>
-              </label>
-              <label class="avatar-field">
-                毛色
-                <input type="color" id="avatar-skin" value="#f5c6a0" />
-              </label>
-              <label class="avatar-field">
-                耳朵内侧
-                <input type="color" id="avatar-hair-color" value="#e8a87c" />
-              </label>
-              <label class="avatar-field">
-                围巾颜色
-                <input type="color" id="avatar-top" value="#ff6b4a" />
-              </label>
-              <label class="avatar-field">
-                肚皮颜色
-                <input type="color" id="avatar-bottom" value="#ffe8d6" />
-              </label>
-              <div class="avatar-form-actions">
-                <button type="button" class="btn btn--secondary btn--sm" id="btn-avatar-reset">恢复默认</button>
-              </div>
-            </form>
           </div>
 
-          <div class="profile-avatar-wizard">
-          <h3 class="card__title">高级角色配置（Wizard）</h3>
-          <p class="card__meta">按步骤配置专属角色，保存后会在图片、动画、对话和共跳中统一使用</p>
+          <details class="profile-avatar-wizard compact-details">
+          <summary>高级角色配置</summary>
+          <p class="card__meta">按步骤配置专属角色，保存后会在训练、对话和共跳中统一使用。</p>
           <p id="avatar-wizard-step" style="font-size:0.8rem;color:#8b9cb3;margin:0 0 8px">Step 1 / 8：选择物种</p>
 
           <div id="wizard-step-1" class="wizard-step">
@@ -524,10 +513,10 @@
             <button class="btn btn--secondary btn--sm" type="button" data-preset="duole">多乐</button>
             <button class="btn btn--secondary btn--sm" type="button" data-preset="coco">Coco</button>
           </div>
-          </div>
+          </details>
         </article>
 
-        <div class="grid-2">
+        <div class="profile-data-compact">
           <article class="card">
             <h3 class="card__title">我的数据</h3>
             <p class="card__meta">移动端展示</p>
@@ -535,16 +524,6 @@
               <li><span class="workout-list__icon">🔥</span><span>连续训练</span><span class="workout-list__duration" id="profile-streak">3 天</span></li>
               <li><span class="workout-list__icon">🏅</span><span>总积分</span><span class="workout-list__duration" id="profile-points">120 分</span></li>
               <li><span class="workout-list__icon">⏱️</span><span>本周时长</span><span class="workout-list__duration" id="profile-minutes">25 分钟</span></li>
-            </ul>
-          </article>
-          <article class="card">
-            <h3 class="card__title">工作流</h3>
-            <p class="card__meta">推荐使用路径</p>
-            <ul class="workout-list">
-              <li><span class="workout-list__icon">👤</span><span>先完善资料和 AI 形象</span><span class="workout-list__duration">我的</span></li>
-              <li><span class="workout-list__icon">🕺</span><span>进入房间与好友共跳</span><span class="workout-list__duration">社交</span></li>
-              <li><span class="workout-list__icon">🎯</span><span>需要单人练习时进训练</span><span class="workout-list__duration">训练</span></li>
-              <li><span class="workout-list__icon">🤖</span><span>随时向 AI 提问</span><span class="workout-list__duration">聊天</span></li>
             </ul>
           </article>
         </div>
@@ -555,7 +534,6 @@
       <button class="nav-btn nav-btn--active" data-tab="home" type="button"><span>🏠</span><em>首页</em></button>
       <button class="nav-btn" data-tab="social" type="button"><span>🕺</span><em>社交广场</em></button>
       <button class="nav-btn" data-tab="train" type="button"><span>🎯</span><em>训练</em></button>
-      <button class="nav-btn" data-tab="ai" type="button"><span>🤖</span><em>AI聊天</em></button>
       <button class="nav-btn" data-tab="profile" type="button"><span>👤</span><em>我的</em></button>
     </nav>
   </div>
@@ -680,9 +658,9 @@
             <h4>Agent 接口</h4>
             <input class="agent-endpoint-input" id="agent-endpoint" type="url" placeholder="https://your-api.com/agent（留空用本地）" />
           </div>
-          <button class="voice-btn" id="btn-voice-talk" type="button">按住说话</button>
-          <button class="btn btn--secondary btn--sm" id="btn-voice-speak-tip" type="button">播报当前动作提示</button>
-          <div class="voice-log" id="voice-log"></div>
+          <button class="voice-btn js-voice-talk" type="button">按住说话</button>
+          <button class="btn btn--secondary btn--sm js-voice-speak-tip" type="button">播报当前动作提示</button>
+          <div class="voice-log js-voice-log"></div>
         </div>
 
         <div class="sidebar-panel" id="sidebar-video">
@@ -711,6 +689,7 @@
   <script src="character-profile.js"></script>
   <script src="promptBuilder.js"></script>
   <script src="pose-engine.js"></script>
+  <script src="camera-api.js"></script>
   <script src="avatar-skeleton.js"></script>
   <script src="camera.js"></script>
   <script src="avatar.js"></script>

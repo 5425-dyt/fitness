@@ -118,6 +118,43 @@ SOCIAL_ROOMS: Dict[str, Dict[str, Any]] = {}
 SOCIAL_SOCKETS: Dict[str, Dict[str, WebSocket]] = {}
 SOCIAL_LOCK = asyncio.Lock()
 
+API_CONTRACTS = {
+    "camera": {
+        "frontend_call": "CameraAPI.start({ videoId, facingMode, onFrame, onStatus })",
+        "frame_output": {
+            "landmarks": "MediaPipe pose landmarks or null",
+            "motionLevel": "0-1 normalized motion score",
+            "timestamp": "DOMHighResTimeStamp",
+            "source": "mediapipe | motion-fallback",
+        },
+        "status_output": {
+            "state": "loading | live | fallback | error",
+            "message": "human readable camera/pose status",
+        },
+    },
+    "social_motion": {
+        "websocket": "/social/ws/{room_id}/{user_id}",
+        "event": "motion_update",
+        "payload": {
+            "motion_level": "0-1 normalized motion score",
+            "jump_count": "integer accumulated jump/action count",
+            "pose": "idle | run | jump | stretch | raise",
+            "skeleton": "normalized key joints for 2D avatar fallback",
+            "landmarks": "full normalized pose landmarks for high fidelity avatar",
+        },
+    },
+    "movement_report": {
+        "trigger": "training completed or social room left",
+        "fields": ["durationSec", "completed", "sync", "warmupTip", "stretchTip", "advice"],
+    },
+    "companion_blueprint": {
+        "new_user": "profile capture + photo/preset 2D avatar + direct movement square entry",
+        "returning_user": "reuse frequent plan + historical avatar + AI regeneration on demand",
+        "during_workout": "voice-first prompts, pose correction, rest reminders",
+        "after_workout": "standard report + stretch guidance + next-plan memory",
+    },
+}
+
 
 def _social_color(user_id: str) -> str:
     palette = [
@@ -179,6 +216,11 @@ async def _broadcast_room(room_id: str):
             stale.append(uid)
     for uid in stale:
         conns.pop(uid, None)
+
+
+@app.get("/api/contracts")
+def api_contracts():
+    return {"contracts": API_CONTRACTS}
 
 
 @app.post("/agent")
