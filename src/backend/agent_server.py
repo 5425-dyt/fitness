@@ -26,10 +26,6 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from character_profile import (
     CharacterConfigStore,
-    build_generation_payload,
-    build_final_prompt,
-    build_scene_prompt,
-    evaluate_identity_similarity,
     merge_character_config,
     list_presets,
 )
@@ -49,7 +45,8 @@ if KIMI_API_KEY and KIMI_API_KEY != "your_key_here":
 
 # 会话历史：{ session_id: [{"role":..., "content":...}, ...] }
 SESSION_HISTORY: Dict[str, List[Dict[str, str]]] = {}
-MAX_HISTORY = 20  # 保留最近 20 条消息
+MAX_HISTORY = 20  # 每个会话保留最近 20 条消息
+MAX_SESSIONS = 200  # 最多保留多少个会话，防止内存无限增长
 
 app = FastAPI(title="Fitness Agent")
 app.add_middleware(
@@ -70,17 +67,6 @@ class ChatRequest(BaseModel):
     message: str
     context: dict = {}
     session: str = "fitness-train"
-
-
-class GenerateRequest(BaseModel):
-    profile_id: str = ""
-    scene: str = ""
-    action: str = ""
-    lighting: str = ""
-    camera: str = ""
-    mood: str = ""
-    outfit: str = ""
-    mode: str = "image"
 
 
 class CharacterConfigRequest(BaseModel):
@@ -246,7 +232,11 @@ def chat(req: ChatRequest):
         f"风格模式：{'🧘 教练模式（专业鼓励）' if style == 'coach' else '🎉 娱乐模式（活泼有趣）'}"
     )
 
-    # 获取 / 初始化会话历史
+    # 获取 / 初始化会话历史（超过上限时淘汰最旧的会话，防止内存泄漏）
+    if session not in SESSION_HISTORY and len(SESSION_HISTORY) >= MAX_SESSIONS:
+        oldest = next(iter(SESSION_HISTORY), None)
+        if oldest is not None:
+            SESSION_HISTORY.pop(oldest, None)
     history = SESSION_HISTORY.setdefault(session, [])
     if not history:
         history.append({"role": "system", "content": system_prompt})
@@ -413,80 +403,6 @@ def update_character(character_id: str, req: CharacterConfigRequest):
     patched = merge_character_config({**current, **(req.config or {}), "id": current["id"], "identityLock": True})
     data = character_store.save_current(patched)
     return JSONResponse({"status": "ok", "character_id": data["id"], "character": data})
-
-
-@app.post("/character/generate")
-def generate_with_profile(req: GenerateRequest):
-    """
-    统一生成入口：Scene Params + Current Character(identity lock) -> 生成
-    不允许重新分析图片；仅使用 current_character.json
-    """
-    try:
-        character = character_store.get_current()
-    except FileNotFoundError:
-        return JSONResponse({"error": "current character not found"}, status_code=404)
-
-    if req.profile_id and req.profile_id != character.get("id"):
-        return JSONResponse({"error": "character mismatch with Current Character"}, status_code=400)
-
-    scene_payload = {
-        "scene": req.scene,
-        "action": req.action,
-        "lighting": req.lighting,
-        "camera": req.camera,
-        "mood": req.mood,
-        "outfit": req.outfit,
-    }
-    scene_prompt = build_scene_prompt(scene_payload)
-    generation_payload = build_generation_payload(character, scene_prompt)
-    final_prompt = build_final_prompt(character, scene_prompt)
-
-    attempts = []
-    accepted = None
-    for attempt in range(1, 6):
-        score = evaluate_identity_similarity(character, scene_prompt, attempt)
-        attempts.append({"attempt": attempt, "identity_similarity": score})
-        if score >= 95:
-            accepted = {"attempt": attempt, "identity_similarity": score}
-            break
-
-    generation_task_id = uuid.uuid4().hex
-    generation_record = {
-        "task_id": generation_task_id,
-        "character_id": character["id"],
-        "mode": req.mode,
-        "scene_prompt": scene_prompt,
-        "generation_payload": generation_payload,
-        "final_prompt": final_prompt,
-        "identity_attempts": attempts,
-        "accepted": accepted,
-    }
-    (UPLOADS_DIR / f"{generation_task_id}_generation.json").write_text(
-        json.dumps(generation_record, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
-    if not accepted:
-        return JSONResponse({
-            "status": "failed",
-            "task_id": generation_task_id,
-            "character_id": character["id"],
-            "identity_similarity": attempts[-1]["identity_similarity"],
-            "message": "一致性评分连续重试后仍低于95%，已拒绝返回结果。",
-        }, status_code=409)
-
-    return JSONResponse({
-        "status": "queued",
-        "task_id": generation_task_id,
-        "character_id": character["id"],
-        "identityLock": True,
-        "identity_similarity": accepted["identity_similarity"],
-        "attempt": accepted["attempt"],
-        "scene_prompt": scene_prompt,
-        "generation_payload": generation_payload,
-        "final_prompt": final_prompt,
-        "message": "已基于 Current Character 生成（角色身份锁定）。",
-    })
 
 
 @app.get("/social/rooms")
@@ -681,9 +597,60 @@ async def social_room_ws(websocket: WebSocket, room_id: str, user_id: str):
     except WebSocketDisconnect:
         pass
     finally:
+        # 连接断开时，除了移除 socket，也把成员移出房间，避免残留“幽灵成员”导致房间永不回收
+        room_deleted = False
         async with SOCIAL_LOCK:
             conns = SOCIAL_SOCKETS.get(room_id, {})
             conns.pop(user_id, None)
+            room = SOCIAL_ROOMS.get(room_id)
+            if room:
+                room["members"].pop(user_id, None)
+                if not room["members"]:
+                    SOCIAL_ROOMS.pop(room_id, None)
+                    SOCIAL_SOCKETS.pop(room_id, None)
+                    room_deleted = True
+                else:
+                    room["relay_index"] = min(room.get("relay_index", 0), len(room["members"]) - 1)
+        if not room_deleted:
+            await _broadcast_room(room_id)
+
+
+SOCIAL_MEMBER_TTL = 45  # 秒：无活跃连接且加入超过该时长的成员会被清理
+
+
+async def _social_cleanup_loop():
+    """定期清理断线残留成员和空房间（兜底 WebSocket 未正常关闭的情况）。"""
+    while True:
+        await asyncio.sleep(20)
+        changed_rooms: List[str] = []
+        async with SOCIAL_LOCK:
+            now = time.time()
+            for room_id in list(SOCIAL_ROOMS.keys()):
+                room = SOCIAL_ROOMS.get(room_id)
+                if not room:
+                    continue
+                conns = SOCIAL_SOCKETS.get(room_id, {})
+                stale = [
+                    uid for uid, m in room["members"].items()
+                    if uid not in conns and (now - m.get("joined_at", now)) > SOCIAL_MEMBER_TTL
+                ]
+                if not stale:
+                    continue
+                for uid in stale:
+                    room["members"].pop(uid, None)
+                if not room["members"]:
+                    SOCIAL_ROOMS.pop(room_id, None)
+                    SOCIAL_SOCKETS.pop(room_id, None)
+                else:
+                    room["relay_index"] = min(room.get("relay_index", 0), len(room["members"]) - 1)
+                    changed_rooms.append(room_id)
+        for room_id in changed_rooms:
+            await _broadcast_room(room_id)
+
+
+@app.on_event("startup")
+async def _start_social_cleanup():
+    asyncio.create_task(_social_cleanup_loop())
 
 
 if __name__ == "__main__":

@@ -1,19 +1,19 @@
 /**
- * 虚拟伙伴：可爱小动物外观配置
+ * 虚拟伙伴：人形角色与运动穿搭配置
  */
 const Avatar = (() => {
   const STORAGE_KEY = "fitness-avatar-config";
 
   const DEFAULT = {
-    name: "跳跳",
-    skin: "#f5c6a0",
-    hairColor: "#e8a87c",
-    hairStyle: "long",
+    name: "小跃",
+    skin: "#d9a17c",
+    hairColor: "#36261f",
+    hairStyle: "short",
     topColor: "#ff6b4a",
-    bottomColor: "#ffe8d6",
+    bottomColor: "#263754",
     shoeColor: "#f5f5f5",
-    accessory: "headband",
-    animal: "bunny",
+    outfit: "tracksuit",
+    animal: "human",
   };
 
   let config = { ...DEFAULT };
@@ -29,7 +29,7 @@ const Avatar = (() => {
     plank: "趴趴练",
   };
 
-  const ANIMAL_NAMES = { bunny: "小兔", cat: "小猫", bear: "小熊" };
+  const ANIMAL_NAMES = { human: "人形伙伴", bunny: "小兔", cat: "小猫", bear: "小熊" };
 
   function applySkeletonConfig() {
     SkeletonAvatar.setConfig({
@@ -37,6 +37,10 @@ const Avatar = (() => {
       ear: config.hairColor,
       accent: config.topColor,
       belly: config.bottomColor,
+      lower: config.bottomColor,
+      shoe: config.shoeColor,
+      outfit: config.outfit,
+      hairStyle: config.hairStyle,
       animal: config.animal,
     });
   }

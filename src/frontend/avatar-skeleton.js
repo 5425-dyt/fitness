@@ -1,5 +1,5 @@
 /**
- * 可爱小动物虚拟伙伴（Canvas 渲染 + 姿态驱动 + 程序化动画）
+ * 姿态驱动虚拟伙伴（Canvas 渲染 + 人形关节包覆 + 程序化动画）
  */
 const SkeletonAvatar = (() => {
   const BONES = [
@@ -21,7 +21,11 @@ const SkeletonAvatar = (() => {
     belly: "#ffe8d6",
     ear: "#e8a87c",
     accent: "#ff6b4a",
-    animal: "bunny",
+    lower: "#263754",
+    shoe: "#f5f7fa",
+    outfit: "tracksuit",
+    hairStyle: "short",
+    animal: "human",
   };
 
   let config = { ...DEFAULT_CONFIG };
@@ -522,6 +526,182 @@ const SkeletonAvatar = (() => {
     ctx.restore();
   }
 
+  function drawWrappedJoint(ctx, p, radius, fill, outline = "rgba(255,255,255,.42)") {
+    if (!p) return;
+    ctx.save();
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = outline;
+    ctx.lineWidth = Math.max(1.5, radius * 0.2);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawHumanFace(ctx, head, radius, skin, hair, hairStyle) {
+    ctx.save();
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.ellipse(head.x, head.y, radius * 0.82, radius, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = hair;
+    ctx.beginPath();
+    if (hairStyle === "ponytail") {
+      ctx.ellipse(head.x + radius * 0.82, head.y - radius * 0.25, radius * 0.34, radius * 0.5, 0.35, 0, Math.PI * 2);
+    } else if (hairStyle === "curly") {
+      for (let i = -3; i <= 3; i++) {
+        ctx.arc(head.x + i * radius * 0.23, head.y - radius * 0.72, radius * 0.3, 0, Math.PI * 2);
+      }
+    }
+    ctx.ellipse(head.x, head.y - radius * 0.55, radius * 0.86, radius * 0.58, 0, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#263238";
+    ctx.beginPath();
+    ctx.arc(head.x - radius * 0.27, head.y - radius * 0.04, radius * 0.07, 0, Math.PI * 2);
+    ctx.arc(head.x + radius * 0.27, head.y - radius * 0.04, radius * 0.07, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(120,65,65,.8)";
+    ctx.lineWidth = Math.max(1.5, radius * 0.05);
+    ctx.beginPath();
+    ctx.arc(head.x, head.y + radius * 0.28, radius * 0.2, 0.12 * Math.PI, 0.88 * Math.PI);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawOutfitDetails(ctx, cx, shoulderY, hipY, shoulderW, bodyH, sc, outfit, accent, lower) {
+    ctx.save();
+    if (outfit === "basketball") {
+      ctx.fillStyle = "rgba(255,255,255,.9)";
+      ctx.font = `700 ${Math.max(10, 18 * sc)}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText("23", cx, shoulderY + bodyH * 0.52);
+      ctx.fillRect(cx - shoulderW * 0.34, shoulderY + bodyH * 0.12, shoulderW * 0.68, Math.max(2, 4 * sc));
+    } else if (outfit === "hoodie") {
+      ctx.strokeStyle = "rgba(255,255,255,.45)";
+      ctx.lineWidth = Math.max(1.5, 2.5 * sc);
+      ctx.beginPath();
+      ctx.arc(cx, shoulderY + 7 * sc, shoulderW * 0.24, 0, Math.PI);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(0,0,0,.12)";
+      drawRoundRect(ctx, cx - shoulderW * 0.24, hipY - 25 * sc, shoulderW * 0.48, 18 * sc, 8 * sc);
+    } else if (outfit === "tennis") {
+      ctx.strokeStyle = "rgba(255,255,255,.75)";
+      ctx.lineWidth = Math.max(2, 3 * sc);
+      ctx.beginPath();
+      ctx.moveTo(cx, shoulderY + 8 * sc);
+      ctx.lineTo(cx, hipY - 8 * sc);
+      ctx.stroke();
+    } else if (outfit === "techwear") {
+      ctx.strokeStyle = "rgba(116,240,220,.85)";
+      ctx.lineWidth = Math.max(2, 3 * sc);
+      ctx.beginPath();
+      ctx.moveTo(cx - shoulderW * 0.32, shoulderY + 12 * sc);
+      ctx.lineTo(cx + shoulderW * 0.22, hipY - 8 * sc);
+      ctx.stroke();
+      ctx.fillStyle = lower;
+      drawRoundRect(ctx, cx + shoulderW * 0.05, shoulderY + bodyH * 0.38, shoulderW * 0.27, 13 * sc, 4 * sc);
+    } else {
+      ctx.fillStyle = "rgba(255,255,255,.65)";
+      ctx.fillRect(cx - shoulderW * 0.35, shoulderY + bodyH * 0.34, shoulderW * 0.7, Math.max(2, 4 * sc));
+    }
+    ctx.restore();
+  }
+
+  function drawHumanCharacter(ctx, w, h, lm, mirror) {
+    const ids = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
+    const p = {};
+    ids.forEach((i) => { p[i] = toPoint(lm, i, w, h, mirror); });
+    if (!p[11] || !p[12] || !p[23] || !p[24]) return;
+
+    const shoulder = { x: (p[11].x + p[12].x) / 2, y: (p[11].y + p[12].y) / 2 };
+    const hip = { x: (p[23].x + p[24].x) / 2, y: (p[23].y + p[24].y) / 2 };
+    const torsoLen = Math.max(30, Math.hypot(hip.x - shoulder.x, hip.y - shoulder.y));
+    const sc = Math.max(0.55, Math.min(1.45, torsoLen / (h * 0.22))) * Math.min(w, h) / 390;
+    const shoulderW = Math.max(48 * sc, Math.hypot(p[12].x - p[11].x, p[12].y - p[11].y) * 1.18);
+    const hipW = Math.max(38 * sc, Math.hypot(p[24].x - p[23].x, p[24].y - p[23].y) * 1.14);
+    const limbW = Math.max(10, 18 * sc);
+    const skin = config.fur || "#d9a17c";
+    const hair = config.ear || "#36261f";
+    const accent = config.accent || "#ff6b4a";
+    const lower = config.lower || config.belly || "#263754";
+    const shoe = config.shoe || "#f5f7fa";
+    const outfit = config.outfit || "tracksuit";
+    const longSleeve = ["tracksuit", "hoodie", "techwear"].includes(outfit);
+    const shortBottom = ["basketball", "tennis"].includes(outfit);
+    const upperArm = longSleeve ? accent : skin;
+    const forearm = outfit === "techwear" ? lower : (longSleeve ? accent : skin);
+    const thigh = lower;
+    const calf = shortBottom ? skin : lower;
+
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,.22)";
+    ctx.shadowBlur = 14 * sc;
+    ctx.fillStyle = "rgba(0,0,0,.12)";
+    ctx.beginPath();
+    ctx.ellipse(hip.x, Math.max(p[27]?.y || 0, p[28]?.y || 0) + 9 * sc, shoulderW * 0.55, 8 * sc, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // 四肢先绘制成胶囊，再用同色关节包覆连接处，避免骨架出现断裂。
+    drawPhotoLimb(ctx, p[23], p[25], limbW * 1.35, thigh, thigh);
+    drawPhotoLimb(ctx, p[25], p[27], limbW * 1.08, calf, calf);
+    drawPhotoLimb(ctx, p[24], p[26], limbW * 1.35, thigh, thigh);
+    drawPhotoLimb(ctx, p[26], p[28], limbW * 1.08, calf, calf);
+    drawPhotoLimb(ctx, p[11], p[13], limbW * 1.12, upperArm, upperArm);
+    drawPhotoLimb(ctx, p[13], p[15], limbW * 0.92, forearm, forearm);
+    drawPhotoLimb(ctx, p[12], p[14], limbW * 1.12, upperArm, upperArm);
+    drawPhotoLimb(ctx, p[14], p[16], limbW * 0.92, forearm, forearm);
+
+    const bodyH = torsoLen * 1.24;
+    drawTorsoPath(ctx, (shoulder.x + hip.x) / 2, (shoulder.y + hip.y) / 2, shoulderW, hipW, bodyH, 14 * sc);
+    ctx.fillStyle = accent;
+    ctx.fill();
+
+    if (outfit === "tennis") {
+      ctx.fillStyle = lower;
+      ctx.beginPath();
+      ctx.moveTo(p[23].x - 8 * sc, p[23].y - 3 * sc);
+      ctx.lineTo(p[24].x + 8 * sc, p[24].y - 3 * sc);
+      ctx.lineTo(p[24].x + 20 * sc, p[24].y + 25 * sc);
+      ctx.lineTo(p[23].x - 20 * sc, p[23].y + 25 * sc);
+      ctx.closePath();
+      ctx.fill();
+    }
+    drawOutfitDetails(ctx, (shoulder.x + hip.x) / 2, shoulder.y, hip.y, shoulderW, bodyH, sc, outfit, accent, lower);
+
+    const jointR = Math.max(6, limbW * 0.52);
+    [11, 12].forEach((i) => drawWrappedJoint(ctx, p[i], jointR * 1.08, accent));
+    [13, 14].forEach((i) => drawWrappedJoint(ctx, p[i], jointR, longSleeve ? accent : skin));
+    [23, 24].forEach((i) => drawWrappedJoint(ctx, p[i], jointR * 1.15, lower));
+    [25, 26].forEach((i) => drawWrappedJoint(ctx, p[i], jointR * 1.08, shortBottom ? skin : lower));
+    [15, 16].forEach((i) => drawWrappedJoint(ctx, p[i], jointR * 0.8, skin));
+    [27, 28].forEach((i) => {
+      if (!p[i]) return;
+      ctx.fillStyle = shoe;
+      ctx.beginPath();
+      ctx.ellipse(p[i].x + (i === 27 ? -2 : 2) * sc, p[i].y + 3 * sc, 13 * sc, 8 * sc, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    const headR = Math.max(22, shoulderW * 0.33);
+    const nose = p[0] || { x: shoulder.x, y: shoulder.y - headR * 1.7 };
+    const trackedHeadY = shoulder.y + (nose.y - shoulder.y) * 0.55;
+    const head = {
+      x: shoulder.x + (nose.x - shoulder.x) * 0.58,
+      y: Math.max(
+        shoulder.y - headR * 1.8,
+        Math.min(trackedHeadY, shoulder.y - headR * 1.05)
+      ),
+    };
+    // 颈部也是关节包覆的一部分。
+    drawPhotoLimb(ctx, { x: shoulder.x, y: shoulder.y + 2 * sc }, { x: head.x, y: head.y + headR * 0.75 }, limbW * 0.72, skin, skin);
+    drawHumanFace(ctx, head, headR, skin, hair, config.hairStyle);
+    ctx.restore();
+  }
+
   function drawPhotoCharacter(ctx, w, h, lm, mirror) {
     const img = photoAvatar?.image;
     if (!img?.complete || !img.naturalWidth) {
@@ -662,6 +842,8 @@ const SkeletonAvatar = (() => {
 
     if (photoAvatar) {
       drawPhotoCharacter(ctx, w, h, lm, mirror);
+    } else if (config.animal === "human") {
+      drawHumanCharacter(ctx, w, h, lm, mirror);
     } else {
       drawCuteAnimal(ctx, w, h, lm, presetPose);
       drawLearningOverlay(ctx, lm, w, h, mirror);

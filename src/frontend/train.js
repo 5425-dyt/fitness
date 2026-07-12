@@ -238,261 +238,149 @@ const TrainMode = (() => {
     resetUploadState();
   }
 
-  function bindPhotoAnimate() {
-    const status = document.getElementById('photo-status');
-    const stepLabel = document.getElementById("avatar-wizard-step");
-    const prevBtn = document.getElementById("btn-wizard-prev");
-    const nextBtn = document.getElementById("btn-wizard-next");
-    const btnGen = document.getElementById('btn-generate-animate');
-    const btnClear = document.getElementById('btn-clear-animate');
-    const steps = Array.from(document.querySelectorAll(".wizard-step"));
-    let step = 1;
+  // 固定的运动伙伴库：用户从中挑选一个组合，不再走「AI 生成」
+  const FIXED_CHARACTERS = [
+    {
+      id: "tiaotiao", name: "小跃", emoji: "🏃‍♀️", animal: "human", outfit: "tracksuit", hairStyle: "ponytail",
+      style: "energetic", personality: "energetic", tag: "元气运动套装",
+      colors: { fur: "#e2ad86", ear: "#3c2720", top: "#ff5d52", belly: "#253552", shoe: "#ffffff" },
+      blurb: "红色运动外套与深色长裤。",
+    },
+    {
+      id: "shandian", name: "阿拓", emoji: "⛹️‍♂️", animal: "human", outfit: "basketball", hairStyle: "short",
+      style: "sporty", personality: "strict", tag: "篮球训练服",
+      colors: { fur: "#9b6648", ear: "#171717", top: "#5c45e8", belly: "#29234f", shoe: "#f4f0ff" },
+      blurb: "无袖球衣、运动短裤与球鞋。",
+    },
+    {
+      id: "paopao", name: "青禾", emoji: "🧘‍♀️", animal: "human", outfit: "yoga", hairStyle: "ponytail",
+      style: "healing", personality: "warm", tag: "瑜伽套装",
+      colors: { fur: "#f0c5a7", ear: "#5a392d", top: "#68b89a", belly: "#315f59", shoe: "#eaf7f2" },
+      blurb: "轻量上衣与包覆式瑜伽长裤。",
+    },
+    {
+      id: "coco", name: "可可", emoji: "🏃‍♂️", animal: "human", outfit: "hoodie", hairStyle: "curly",
+      style: "healing", personality: "warm", tag: "休闲连帽装",
+      colors: { fur: "#744a32", ear: "#201713", top: "#e6a54b", belly: "#344255", shoe: "#fff4df" },
+      blurb: "宽松连帽衫与束脚运动裤。",
+    },
+    {
+      id: "naitang", name: "夏柠", emoji: "🎾", animal: "human", outfit: "tennis", hairStyle: "ponytail",
+      style: "cute", personality: "funny", tag: "网球穿搭",
+      colors: { fur: "#f2c7aa", ear: "#9b5a38", top: "#fff5e6", belly: "#ef7794", shoe: "#ffffff" },
+      blurb: "运动 Polo、短裙与轻量球鞋。",
+    },
+    {
+      id: "momo", name: "墨川", emoji: "🕺", animal: "human", outfit: "techwear", hairStyle: "short",
+      style: "minimal", personality: "steady", tag: "机能训练装",
+      colors: { fur: "#c78f6b", ear: "#161a20", top: "#222a37", belly: "#111827", shoe: "#71ead6" },
+      blurb: "深色机能服与荧光关节线条。",
+    },
+  ];
 
-    function setStep(v) {
-      step = Math.min(Math.max(v, 1), 8);
-      steps.forEach((el, idx) => { el.hidden = idx !== step - 1; });
-      if (stepLabel) stepLabel.textContent = `Step ${step} / 8`;
-      if (prevBtn) prevBtn.disabled = step === 1;
-      if (nextBtn) nextBtn.disabled = step === 8;
-    }
+  const SELECTED_CHARACTER_KEY = "fitness-selected-character";
 
-    function readWizardConfig() {
-      return {
-        species: document.getElementById("wizard-species")?.value || "bunny",
-        style: document.getElementById("wizard-style")?.value || "cute",
-        colors: {
-          fur: document.getElementById("wizard-color-fur")?.value || "#f5c6a0",
-          belly: document.getElementById("wizard-color-belly")?.value || "#ffe8d6",
-          ears: document.getElementById("wizard-color-ears")?.value || "#e8a87c",
-          nose: document.getElementById("wizard-color-nose")?.value || "#e88f8f",
-          paws: document.getElementById("wizard-color-paws")?.value || "#f7d8be",
-          tail: document.getElementById("wizard-color-tail")?.value || "#f3c2a0",
-          eyes: document.getElementById("wizard-color-eyes")?.value || "#2a2018",
-          clothes: document.getElementById("wizard-clothes-color")?.value || "#ff6b4a",
-        },
-        body: {
-          ears: document.getElementById("wizard-ears")?.value || "long",
-          tail: document.getElementById("wizard-tail")?.value || "fluffy",
-          size: document.getElementById("wizard-size")?.value || "standard",
-          eyes: document.getElementById("wizard-eyes-shape")?.value || "round",
-        },
-        clothes: {
-          type: document.getElementById("wizard-clothes-type")?.value || "sportswear",
-          color: document.getElementById("wizard-clothes-color")?.value || "#ff6b4a",
-        },
-        accessories: {
-          hat: document.getElementById("wizard-acc-hat")?.value || "none",
-          scarf: document.getElementById("wizard-acc-scarf")?.value || "none",
-          glasses: document.getElementById("wizard-acc-glasses")?.value || "none",
-          headband: document.getElementById("wizard-acc-headband")?.value || "none",
-          headphones: document.getElementById("wizard-acc-headphones")?.value || "none",
-          backpack: document.getElementById("wizard-acc-backpack")?.value || "none",
-          wristband: document.getElementById("wizard-acc-wristband")?.value || "none",
-        },
-        personality: document.getElementById("wizard-personality")?.value || "warm",
-        voice: { provider: "reserved", style: document.getElementById("wizard-voice-style")?.value || "reserved" },
-        animationStyle: "bouncy",
-        promptTemplate: "",
-      };
-    }
+  function characterToConfig(char) {
+    return {
+      name: char.name,
+      presetKey: char.id,
+      species: char.animal,
+      style: char.style || "cute",
+      personality: char.personality || "warm",
+      colors: {
+        fur: char.colors.fur,
+        ears: char.colors.ear,
+        belly: char.colors.belly,
+        clothes: char.colors.top,
+        shoes: char.colors.shoe,
+      },
+      clothes: { type: char.outfit, color: char.colors.top },
+      outfit: char.outfit,
+      hairStyle: char.hairStyle,
+      animationStyle: "bouncy",
+    };
+  }
 
-    function applyCharacterPreview(config) {
-      Avatar.setConfig({
-        animal: config.species === "robot" ? "bear" : (["bunny", "cat", "bear"].includes(config.species) ? config.species : "bunny"),
-        skin: config.colors.fur,
-        hairColor: config.colors.ears,
-        topColor: config.colors.clothes,
-        bottomColor: config.colors.belly,
-      });
-    }
-
-    function setWizardFromCharacter(character) {
-      if (!character) return;
-      const set = (id, val) => {
-        const el = document.getElementById(id);
-        if (el && val != null) el.value = val;
-      };
-      set("wizard-species", character.species);
-      set("wizard-style", character.style);
-      set("wizard-color-fur", character.colors?.fur);
-      set("wizard-color-belly", character.colors?.belly);
-      set("wizard-color-ears", character.colors?.ears);
-      set("wizard-color-nose", character.colors?.nose);
-      set("wizard-color-paws", character.colors?.paws);
-      set("wizard-color-tail", character.colors?.tail);
-      set("wizard-color-eyes", character.colors?.eyes);
-      set("wizard-ears", character.body?.ears);
-      set("wizard-tail", character.body?.tail);
-      set("wizard-size", character.body?.size);
-      set("wizard-eyes-shape", character.body?.eyes);
-      set("wizard-clothes-type", character.clothes?.type);
-      set("wizard-clothes-color", character.clothes?.color || character.colors?.clothes);
-      set("wizard-acc-hat", character.accessories?.hat);
-      set("wizard-acc-scarf", character.accessories?.scarf);
-      set("wizard-acc-glasses", character.accessories?.glasses);
-      set("wizard-acc-headband", character.accessories?.headband);
-      set("wizard-acc-headphones", character.accessories?.headphones);
-      set("wizard-acc-backpack", character.accessories?.backpack);
-      set("wizard-acc-wristband", character.accessories?.wristband);
-      set("wizard-personality", character.personality);
-      set("wizard-voice-style", character.voice?.style);
-    }
-
-    function imageToAvatarConfig(dataUrl, image) {
-      const canvas = document.createElement("canvas");
-      const size = 48;
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext("2d", { willReadFrequently: true });
-      ctx.drawImage(image, 0, 0, size, size);
-      const data = ctx.getImageData(0, 0, size, size).data;
-      let r = 0, g = 0, b = 0, count = 0;
-      for (let i = 0; i < data.length; i += 16) {
-        if (data[i + 3] < 40) continue;
-        r += data[i];
-        g += data[i + 1];
-        b += data[i + 2];
-        count++;
-      }
-      const toHex = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0");
-      const main = count ? `#${toHex(r / count)}${toHex(g / count)}${toHex(b / count)}` : "#f5c6a0";
-      const config = readWizardConfig();
-      config.source = "photo-2d-human";
-      config.referenceImage = dataUrl;
-      config.species = "human-2d";
-      config.style = "sporty";
-      config.colors = {
-        ...config.colors,
-        fur: main,
-        belly: "#fff3df",
-        ears: main,
-        paws: main,
-        tail: main,
-        clothes: document.getElementById("wizard-clothes-color")?.value || "#4f8f62",
-      };
-      config.body = { ...config.body, ears: "human", tail: "none", size: "standard" };
-      config.clothes = { ...config.clothes, type: "sportswear", color: config.colors.clothes };
-      config.capabilities = ["pose-landmarks", "social-square", "voice-companion", "photo-derived-2d"];
-      return config;
-    }
-
-    function bindPhotoAvatarMaker() {
-      const input = document.getElementById("avatar-photo-input");
-      const photoStatus = document.getElementById("avatar-photo-status");
-      input?.addEventListener("change", () => {
-        const file = input.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          const image = new Image();
-          image.onload = async () => {
-            const config = imageToAvatarConfig(reader.result, image);
-            setWizardFromCharacter(config);
-            applyCharacterPreview(config);
-            CharacterProfileStore.save({ character_id: `photo-${Date.now()}`, character: config });
-            await CharacterProfileStore.saveCharacter?.(config);
-            if (photoStatus) photoStatus.textContent = "已生成二维人物，并同步到训练/运动广场";
-            showToast("二维人物形象已生成");
-            VoiceAgent.speak?.("你的二维运动形象已经生成，可以进入运动广场跟随动作了。");
-          };
-          image.src = reader.result;
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    function wireWizardLivePreview() {
-      document.querySelectorAll(".wizard-step input, .wizard-step select").forEach((el) => {
-        el.addEventListener("input", () => applyCharacterPreview(readWizardConfig()));
-        el.addEventListener("change", () => applyCharacterPreview(readWizardConfig()));
-      });
-    }
-
-    prevBtn?.addEventListener("click", () => setStep(step - 1));
-    nextBtn?.addEventListener("click", () => setStep(step + 1));
-    setStep(1);
-    wireWizardLivePreview();
-    const existingCharacter = CharacterProfileStore.getCharacter?.();
-    if (existingCharacter) setWizardFromCharacter(existingCharacter);
-    applyCharacterPreview(readWizardConfig());
-    bindPhotoAvatarMaker();
-
-    btnGen?.addEventListener('click', async () => {
-      const existingProfile = CharacterProfileStore.load();
-      const config = readWizardConfig();
-      applyCharacterPreview(config);
-
-      if (status) status.textContent = '正在创建并保存角色配置…';
-      const profileRes = await VoiceAgent.createCharacterProfile(config);
-      if (!profileRes.ok) {
-        showToast('角色创建失败');
-        status.textContent = `后端未连接：${profileRes.error || 'character config 接口不可用'}`;
-        return;
-      }
-
-      const profileRecord = {
-        character_id: profileRes.data.character_id,
-        character: profileRes.data.character || {},
-      };
-      CharacterProfileStore.save(profileRecord);
-
-      const sceneSpec = PromptBuilder.buildSceneSpec({
-        scene: "training studio",
-        action: "standing with relaxed posture",
-        lighting: "soft key light",
-        camera: "medium shot",
-        mood: "energetic",
-        outfit: "sportswear",
-      });
-      if (status) status.textContent = '角色已保存，正在使用新角色进行首次生成…';
-      const genRes = await VoiceAgent.generateWithProfile(profileRecord.character_id, sceneSpec);
-      if (!genRes.ok) {
-        showToast('角色生成失败');
-        status.textContent = `角色已保存，但生成接口不可用：${genRes.error || 'unknown'}`;
-      } else {
-        status.textContent = `角色已保存（ID: ${profileRecord.character_id.slice(0, 8)}，一致性 ${genRes.data.identity_similarity || "--"}%）。`;
-        showToast('AI 陪伴角色创建成功');
-      }
+  function applyCharacterToAvatar(char) {
+    Avatar.setConfig({
+      name: char.name,
+      animal: char.animal,
+      skin: char.colors.fur,
+      hairColor: char.colors.ear,
+      topColor: char.colors.top,
+      bottomColor: char.colors.belly,
+      shoeColor: char.colors.shoe,
+      outfit: char.outfit,
+      hairStyle: char.hairStyle,
     });
+  }
 
-    btnClear?.addEventListener('click', () => {
-      const stage = document.getElementById('avatar-stage');
-      const old = stage?.querySelector('.avatar-2d-anim');
-      if (old) old.remove();
-      Avatar.clearPhoto();
-      CharacterProfileStore.clear();
-      if (status) status.textContent = '已重置角色创建流程';
-      setStep(1);
-      applyCharacterPreview(readWizardConfig());
-    });
+  function getSelectedCharacterId() {
+    return localStorage.getItem(SELECTED_CHARACTER_KEY)
+      || CharacterProfileStore.getCharacter?.()?.presetKey
+      || "";
+  }
 
-    document.querySelectorAll("[data-preset]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const presetId = btn.getAttribute("data-preset");
-        if (!presetId) return;
-        if (status) status.textContent = `正在套用模板 ${presetId}...`;
-        const res = await VoiceAgent.createCharacterProfile({}, presetId);
-        if (!res.ok) {
-          showToast("模板应用失败");
-          status.textContent = `模板失败：${res.error || "接口不可用"}`;
-          return;
-        }
-        const record = { character_id: res.data.character_id, character: res.data.character || {} };
-        CharacterProfileStore.save(record);
-        setWizardFromCharacter(record.character);
-        applyCharacterPreview({
-          species: record.character.species || "bunny",
-          colors: {
-            fur: record.character.colors?.fur || "#f5c6a0",
-            ears: record.character.colors?.ears || "#e8a87c",
-            belly: record.character.colors?.belly || "#ffe8d6",
-            clothes: record.character.colors?.clothes || "#ff6b4a",
-          },
-        });
-        status.textContent = `模板已应用：${presetId}（ID: ${record.character_id.slice(0, 8)}）`;
-        showToast("模板角色创建成功");
+  function bindCharacterGallery() {
+    const gallery = document.getElementById("character-gallery");
+    const status = document.getElementById("character-select-status");
+    if (!gallery) return;
+
+    function renderStatus(char) {
+      if (!status) return;
+      status.textContent = char
+        ? `当前伙伴：${char.name} · ${char.tag}`
+        : "尚未选择伙伴，点一个开始吧";
+    }
+
+    function renderGallery() {
+      const selectedId = getSelectedCharacterId();
+      gallery.innerHTML = FIXED_CHARACTERS.map((c) => `
+        <button type="button" class="character-card ${c.id === selectedId ? "character-card--active" : ""}" data-character-id="${c.id}"
+          style="--c-fur:${c.colors.fur};--c-ear:${c.colors.ear};--c-top:${c.colors.top};--c-belly:${c.colors.belly}">
+          <span class="character-card__figure character-card__figure--${c.outfit}" aria-hidden="true">
+            <i class="character-card__head"></i>
+            <i class="character-card__torso"></i>
+            <i class="character-card__arm character-card__arm--left"></i>
+            <i class="character-card__arm character-card__arm--right"></i>
+            <i class="character-card__leg character-card__leg--left"></i>
+            <i class="character-card__leg character-card__leg--right"></i>
+          </span>
+          <strong class="character-card__name">${c.name}</strong>
+          <span class="character-card__tag">${c.tag}</span>
+          <small class="character-card__blurb">${c.blurb}</small>
+        </button>
+      `).join("");
+      gallery.querySelectorAll("[data-character-id]").forEach((btn) => {
+        btn.addEventListener("click", () => selectCharacter(btn.getAttribute("data-character-id")));
       });
-    });
+      const selected = FIXED_CHARACTERS.find((c) => c.id === selectedId) || null;
+      if (selected) applyCharacterToAvatar(selected);
+      renderStatus(selected);
+    }
+
+    function selectCharacter(charId) {
+      const char = FIXED_CHARACTERS.find((c) => c.id === charId);
+      if (!char) return;
+      const config = characterToConfig(char);
+      applyCharacterToAvatar(char);
+      // 立即本地保存，保证离线 / file:// 下也可用
+      CharacterProfileStore.save({ character_id: `fixed-${char.id}`, character: config });
+      localStorage.setItem(SELECTED_CHARACTER_KEY, char.id);
+      renderGallery();
+      showToast(`已选择伙伴：${char.name}`);
+      VoiceAgent.speak?.(`你选择了${char.name}，接下来我陪你一起运动。`);
+      // 后端可用时同步一份 Current Character（best-effort）
+      VoiceAgent.createCharacterProfile?.(config)
+        .then((res) => {
+          if (res?.ok) {
+            CharacterProfileStore.save({ character_id: res.data.character_id, character: res.data.character });
+          }
+        })
+        .catch(() => { /* 后端不可用则忽略，本地已保存 */ });
+    }
+
+    renderGallery();
   }
 
   async function enter() {
@@ -535,9 +423,9 @@ const TrainMode = (() => {
     await CharacterProfileStore.syncFromBackend?.();
     bindSidebarTabs();
     bindVideoTeaching();
-    bindPhotoAnimate();
-    if (!CharacterProfileStore.getProfileId?.()) {
-      showToast("可在“我的”上传照片生成 AI 陪伴形象");
+    bindCharacterGallery();
+    if (!getSelectedCharacterId()) {
+      showToast("可在“我的”里挑选一个运动伙伴形象");
     }
 
     document.getElementById("btn-enter-immersive")?.addEventListener("click", enter);

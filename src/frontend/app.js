@@ -136,6 +136,30 @@ const COMMUNITY_POSTS = [
   },
 ];
 
+const COMMUNITY_STORAGE_KEY = "fitness-community";
+
+function loadCommunityState() {
+  try {
+    const raw = localStorage.getItem(COMMUNITY_STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    COMMUNITY_POSTS.forEach((p) => {
+      const s = saved[p.id];
+      if (!s) return;
+      if (typeof s.likes === "number") p.likes = s.likes;
+      if (Array.isArray(s.comments)) p.comments = s.comments;
+    });
+  } catch (_) { /* ignore */ }
+}
+
+function saveCommunityState() {
+  try {
+    const map = {};
+    COMMUNITY_POSTS.forEach((p) => { map[p.id] = { likes: p.likes, comments: p.comments }; });
+    localStorage.setItem(COMMUNITY_STORAGE_KEY, JSON.stringify(map));
+  } catch (_) { /* ignore */ }
+}
+
 const SOCIAL_MODE_LABEL = {
   "free-jump": "自由共跳",
   "library-jump": "训练库共跳",
@@ -173,15 +197,46 @@ function saveUserProfile(profile) {
   }
 }
 
+function dateKey(offsetDays = 0) {
+  const d = new Date(Date.now() + offsetDays * 86400000);
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+const STATS_STORAGE_KEY = "fitness-stats";
+const DEFAULT_STATS = { points: 120, streak: 3, minutes: 25, lastCheckinDate: "" };
+
+function loadStats() {
+  try {
+    const raw = localStorage.getItem(STATS_STORAGE_KEY);
+    return raw ? { ...DEFAULT_STATS, ...JSON.parse(raw) } : { ...DEFAULT_STATS };
+  } catch (_) {
+    return { ...DEFAULT_STATS };
+  }
+}
+
+function saveStats() {
+  try {
+    localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify({
+      points: state.points,
+      streak: state.streak,
+      minutes: state.minutes,
+      lastCheckinDate: state.lastCheckinDate,
+    }));
+  } catch (_) { /* ignore */ }
+}
+
+const _initialStats = loadStats();
+
 const state = {
   goal: "fat-burn",
   level: "medium",
   workout: [],
   currentStep: 0,
-  points: 120,
-  streak: 3,
-  minutes: 25,
-  checkedIn: localStorage.getItem("fitness-home-checked-in") === "1",
+  points: _initialStats.points,
+  streak: _initialStats.streak,
+  minutes: _initialStats.minutes,
+  lastCheckinDate: _initialStats.lastCheckinDate,
+  checkedIn: _initialStats.lastCheckinDate === dateKey(0),
   selectedTrainingId: localStorage.getItem("fitness-selected-training") || "fat-burn",
   sessionStartAt: 0,
   lastReport: (() => {
@@ -278,10 +333,12 @@ function renderCheckinReminder() {
 
 function doHomeCheckin() {
   if (state.checkedIn) return;
+  // 连续打卡：昨天打过就 +1，否则重新从 1 开始
+  state.streak = state.lastCheckinDate === dateKey(-1) ? state.streak + 1 : 1;
+  state.lastCheckinDate = dateKey(0);
   state.checkedIn = true;
   state.points += 10;
-  state.streak += 1;
-  localStorage.setItem("fitness-home-checked-in", "1");
+  saveStats();
   updateStats();
   renderCheckinReminder();
   showToast("打卡成功，积分 +10");
@@ -320,6 +377,7 @@ function renderCommunityFeed() {
       const post = COMMUNITY_POSTS.find((x) => x.id === btn.dataset.likePost);
       if (!post) return;
       post.likes += 1;
+      saveCommunityState();
       renderCommunityFeed();
     });
   });
@@ -332,6 +390,7 @@ function renderCommunityFeed() {
       const text = input?.value.trim();
       if (!post || !text) return;
       post.comments.push(text);
+      saveCommunityState();
       renderCommunityFeed();
     });
   });
@@ -529,19 +588,31 @@ function renderMovementAssist() {
 function generateMovementReport(type = "single-training") {
   const training = getSelectedTraining();
   const durationSec = state.sessionStartAt ? Math.max(30, Math.round((Date.now() - state.sessionStartAt) / 1000)) : Math.max(60, state.currentStep * 120);
-  const matchText = document.getElementById("stat-match")?.textContent || "78%";
-  const cameraMotion = typeof Camera !== "undefined" ? Camera.getMotionLevel?.() : 0;
-  const motion = Math.round((socialMotion || cameraMotion || 0.35) * 100);
+  const cameraMotion = typeof Camera !== "undefined" ? (Camera.getMotionLevel?.() || 0) : 0;
+  const motion = Math.round((socialMotion || cameraMotion || 0) * 100);
+  const matchRaw = parseInt(document.getElementById("stat-match")?.textContent || "", 10);
+  const hasMatch = !Number.isNaN(matchRaw);
+  let sync;
+  if (type === "social-cojump") {
+    sync = motion > 0 ? `${motion}%` : "—";
+  } else {
+    sync = hasMatch ? `${matchRaw}%` : (motion > 0 ? `${motion}%` : "—");
+  }
+  const advice = motion === 0
+    ? "这次没有采集到足够的动作数据，下次记得开启摄像头并让全身入镜。"
+    : motion < 45
+      ? "动作幅度偏小，下次可以站远一点，保证全身入镜。"
+      : "整体节奏不错，继续保持稳定呼吸和动作标准。";
   const report = {
     id: Date.now(),
     type,
     title: type === "social-cojump" ? "社交共跳报告" : `${training.title}训练报告`,
     durationSec,
     completed: type === "social-cojump" ? socialJumpCount : state.currentStep,
-    sync: type === "social-cojump" ? `${Math.max(45, motion)}%` : matchText,
+    sync,
     warmupTip: movementWarmupTip(training),
     stretchTip: movementStretchTip(training),
-    advice: motion < 45 ? "动作幅度偏小，下次可以站远一点，保证全身入镜。" : "整体节奏不错，继续保持稳定呼吸和动作标准。",
+    advice,
   };
   state.lastReport = report;
   localStorage.setItem("fitness-last-movement-report", JSON.stringify(report));
@@ -581,6 +652,7 @@ function updateStats() {
   const minutes = document.getElementById("stat-minutes");
   if (streak) streak.textContent = state.streak;
   if (minutes) minutes.textContent = state.minutes;
+  saveStats();
   renderProfilePanel();
 }
 
@@ -711,7 +783,7 @@ async function handleChatInput(text) {
     tip: state.currentTip || ex?.tip || "注意动作标准",
     style: state.aiStyle || "coach",
     userProfile: state.profile,
-    poseMatch: state.poseMatch ?? parseInt(document.getElementById("stat-match")?.textContent || "0", 10) || 0,
+    poseMatch: state.poseMatch ?? (parseInt(document.getElementById("stat-match")?.textContent || "0", 10) || 0),
     motionLevel: typeof Camera !== "undefined" ? Camera.getMotionLevel?.() ?? 0 : socialMotion,
   };
   const reply = typeof VoiceAgent !== "undefined"
@@ -748,7 +820,9 @@ async function socialFetch(path, options = {}) {
 
 function socialWsUrl(roomId, userId) {
   const protocol = location.protocol === "https:" ? "wss" : "ws";
-  return `${protocol}://${location.hostname}:8766/social/ws/${roomId}/${userId}`;
+  // file:// 或本地打开时 location.hostname 为空，回退到 localhost，避免拼出非法的 ws://:8766
+  const host = location.hostname || "localhost";
+  return `${protocol}://${host}:8766/social/ws/${roomId}/${userId}`;
 }
 
 function renderSocialRoomList() {
@@ -989,7 +1063,14 @@ function setSocialRoomVisible(inRoom) {
   }
 }
 
+function isMobileDevice() {
+  return (window.matchMedia && window.matchMedia("(pointer: coarse)").matches)
+    || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+}
+
 async function requestSocialLandscape() {
+  // 仅在移动端尝试全屏 + 锁定横屏，桌面浏览器保持正常窗口
+  if (!isMobileDevice()) return;
   try {
     if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
       await document.documentElement.requestFullscreen();
@@ -1411,7 +1492,10 @@ function drawSocialStagePoseCanvas(room) {
         const skeleton = socialSkeletonFromLandmarks(realLandmarks);
         drawSocialStageStickFigure(ctx, skeleton, 0, 0, slotW, slotH, localAvatarColor, "二维形象", score);
       } else {
-        SkeletonAvatar.draw(ctx, realLandmarks, slotW, slotH, { mirror: true, wireframe: true });
+        SkeletonAvatar.draw(ctx, realLandmarks, slotW, slotH, {
+          mirror: true,
+          wireframe: m.user_id !== state.social.userId,
+        });
       }
       ctx.restore();
       ctx.save();
@@ -1427,77 +1511,6 @@ function drawSocialStagePoseCanvas(room) {
     const color = m.user_id === state.social.userId ? localAvatarColor : (m.color || "#6ea8fe");
     drawSocialStageStickFigure(ctx, skeleton, x, y, slotW, slotH, color, m.name, score);
   });
-}
-
-function loopSocialMotion() {
-  if (!socialStream) return;
-  const video = document.getElementById("social-local-video");
-  if (!video || video.readyState < 2) {
-    socialRaf = requestAnimationFrame(loopSocialMotion);
-    return;
-  }
-
-  let lm = null;
-  const frameMotion = sampleSocialVideoMotion(video);
-  try {
-    lm = PoseEngine.detect(video, performance.now());
-  } catch (_) {
-    lm = null;
-  }
-
-  if (lm && lm.length > 16) {
-    socialLastLandmarks = lm;
-    drawSocialLocalPose(lm);
-    const y1 = lm[11]?.y;
-    const y2 = lm[12]?.y;
-    if (typeof y1 === "number" && typeof y2 === "number") {
-      const y = (y1 + y2) / 2;
-      if (socialLastShoulderY !== null) {
-        const delta = socialLastShoulderY - y;
-        const now = Date.now();
-        if (delta > 0.028 && now - socialLastJumpTs > 300) {
-          socialJumpCount++;
-          socialLastJumpTs = now;
-        }
-        const instant = Math.min(1, Math.abs(delta) * 20 + frameMotion * 0.65 + 0.08);
-        socialMotion = socialMotion * 0.78 + instant * 0.22;
-      }
-      socialLastShoulderY = y;
-    }
-    setSocialDetectBadge("MediaPipe 骨架识别中", "live");
-  } else {
-    drawSocialLocalPose(null);
-    const now = Date.now();
-    if (frameMotion > 0.42 && now - socialLastJumpTs > 420) {
-      socialJumpCount++;
-      socialLastJumpTs = now;
-    }
-    socialMotion = socialMotion * 0.82 + frameMotion * 0.18;
-    setSocialDetectBadge(frameMotion > 0.08 ? "基础动作识别中" : "等待动作", frameMotion > 0.08 ? "fallback" : "idle");
-  }
-
-  if (state.social.currentRoom) {
-    drawSocialStagePoseCanvas(state.social.currentRoom);
-  }
-
-  if (Date.now() - socialLastMotionSendTs > 180) {
-    socialLastMotionSendTs = Date.now();
-    const pose = lm ? socialPoseTag(lm) : (socialMotion > 0.35 ? "jump" : socialMotion > 0.12 ? "run" : "idle");
-    const mediaPipeSkeleton = socialSkeletonFromLandmarks(lm);
-    const skeleton = Object.keys(mediaPipeSkeleton).length
-      ? mediaPipeSkeleton
-      : animatedSocialFallbackSkeleton(pose, socialMotion);
-    sendSocialSocket({
-      type: "motion_update",
-      motion_level: Number(socialMotion.toFixed(3)),
-      jump_count: socialJumpCount,
-      pose,
-      skeleton,
-      landmarks: simplifySocialLandmarks(lm),
-    });
-  }
-
-  socialRaf = requestAnimationFrame(loopSocialMotion);
 }
 
 function handleSocialCameraFrame(frame) {
@@ -1748,6 +1761,7 @@ function init() {
   bindProfileForm();
   renderProfilePanel();
   renderCheckinReminder();
+  loadCommunityState();
   renderCommunityFeed();
   renderTrainingLibrary();
   renderMovementAssist();

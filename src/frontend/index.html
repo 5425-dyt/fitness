@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>健身操运动陪伴系统</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="avatar.css" />
+  <link rel="stylesheet" href="avatar.css?v=20260712-3" />
   <link rel="stylesheet" href="train.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -271,7 +271,7 @@
       <section class="panel" id="panel-profile">
         <div class="section-head">
           <h2>我的</h2>
-          <p>个人资料、训练偏好和 AI 陪伴形象都在这里维护</p>
+          <p>个人资料、训练偏好和人形运动伙伴都在这里维护</p>
         </div>
 
         <article class="card profile-card">
@@ -348,17 +348,17 @@
             <div>
               <strong>新用户</strong>
               <span>注册/首次进入</span>
-              <p>一次性填写基础信息，上传照片或选择预设生成二维形象，直接进入运动广场。</p>
+              <p>一次性填写基础信息，从固定伙伴里挑选一个运动形象，直接进入运动广场。</p>
             </div>
             <div>
               <strong>老用户</strong>
               <span>再次打开</span>
-              <p>一键调用常用运动方案和历史形象，不满意时让 AI 重新生成训练组合。</p>
+              <p>一键调用常用运动方案和上次选择的伙伴形象，随时可以换一个伙伴。</p>
             </div>
             <div>
               <strong>运动中</strong>
               <span>隐性陪伴</span>
-              <p>手机摄像头采集姿态，二维形象跟随运动轨迹，语音提示热身、休息和纠错。</p>
+              <p>手机摄像头采集姿态，人形伙伴按关节轨迹同步动作，语音提示热身、休息和纠错。</p>
             </div>
             <div>
               <strong>运动后</strong>
@@ -372,148 +372,13 @@
         </details>
 
         <article class="card">
-          <h3 class="card__title">AI 陪伴形象</h3>
-          <p class="card__meta">上传照片生成二维形象；需要细调时展开高级配置。</p>
-          <div class="photo-avatar-maker">
-            <div>
-              <strong>照片生成二维形象</strong>
-              <p>用于训练和运动广场的姿态驱动人物。</p>
-            </div>
-            <label class="btn btn--secondary btn--sm" for="avatar-photo-input">选择照片</label>
-            <input id="avatar-photo-input" type="file" accept="image/*" hidden />
-            <span id="avatar-photo-status">未选择照片</span>
-          </div>
+          <h3 class="card__title">人形运动伙伴</h3>
+          <p class="card__meta">选择不同人物与穿搭；身体和关节会随动作姿态自然包覆联动。</p>
+          <div class="character-gallery" id="character-gallery"></div>
           <div class="avatar-custom avatar-custom--compact">
             <div id="avatar-preview" class="avatar-preview-box" aria-label="小伙伴预览"></div>
           </div>
-
-          <details class="profile-avatar-wizard compact-details">
-          <summary>高级角色配置</summary>
-          <p class="card__meta">按步骤配置专属角色，保存后会在训练、对话和共跳中统一使用。</p>
-          <p id="avatar-wizard-step" style="font-size:0.8rem;color:#8b9cb3;margin:0 0 8px">Step 1 / 8：选择物种</p>
-
-          <div id="wizard-step-1" class="wizard-step">
-            <label class="avatar-field">
-              物种
-              <select id="wizard-species">
-                <option value="bunny">🐰 小兔子</option>
-                <option value="cat">🐱 小猫</option>
-                <option value="dog">🐶 小狗</option>
-                <option value="fox">🦊 小狐狸</option>
-                <option value="panda">🐼 熊猫</option>
-                <option value="bear">🐻 小熊</option>
-                <option value="lion">🦁 小狮子</option>
-                <option value="penguin">🐧 企鹅</option>
-                <option value="frog">🐸 青蛙</option>
-                <option value="robot">🤖 机器人</option>
-              </select>
-            </label>
-          </div>
-          <div id="wizard-step-2" class="wizard-step" hidden>
-            <label class="avatar-field">
-              整体风格
-              <select id="wizard-style">
-                <option value="cute">可爱</option>
-                <option value="healing">治愈</option>
-                <option value="energetic">元气</option>
-                <option value="sporty">运动</option>
-                <option value="sci-fi">科幻</option>
-                <option value="japanese">日系</option>
-                <option value="us-cartoon">美式动画</option>
-                <option value="minimal">极简</option>
-                <option value="plush">毛绒玩偶</option>
-                <option value="pixar">Pixar 风格</option>
-              </select>
-            </label>
-          </div>
-          <div id="wizard-step-3" class="wizard-step" hidden>
-            <div class="avatar-form">
-              <label class="avatar-field">毛色<input type="color" id="wizard-color-fur" value="#f5c6a0" /></label>
-              <label class="avatar-field">肚皮<input type="color" id="wizard-color-belly" value="#ffe8d6" /></label>
-              <label class="avatar-field">耳朵<input type="color" id="wizard-color-ears" value="#e8a87c" /></label>
-              <label class="avatar-field">鼻子<input type="color" id="wizard-color-nose" value="#e88f8f" /></label>
-              <label class="avatar-field">脚掌<input type="color" id="wizard-color-paws" value="#f7d8be" /></label>
-              <label class="avatar-field">尾巴<input type="color" id="wizard-color-tail" value="#f3c2a0" /></label>
-              <label class="avatar-field">眼睛<input type="color" id="wizard-color-eyes" value="#2a2018" /></label>
-            </div>
-          </div>
-          <div id="wizard-step-4" class="wizard-step" hidden>
-            <div class="avatar-form">
-              <label class="avatar-field">耳朵
-                <select id="wizard-ears"><option value="long">长耳朵</option><option value="short">短耳朵</option><option value="droopy">垂耳</option></select>
-              </label>
-              <label class="avatar-field">尾巴
-                <select id="wizard-tail"><option value="long">长</option><option value="short">短</option><option value="fluffy">蓬松</option></select>
-              </label>
-              <label class="avatar-field">体型
-                <select id="wizard-size"><option value="small">小巧</option><option value="standard">标准</option><option value="round">圆滚滚</option><option value="fit">健壮</option></select>
-              </label>
-              <label class="avatar-field">眼型
-                <select id="wizard-eyes-shape"><option value="round">圆眼</option><option value="almond">杏眼</option><option value="big">大眼睛</option><option value="half">半眯眼</option></select>
-              </label>
-            </div>
-          </div>
-          <div id="wizard-step-5" class="wizard-step" hidden>
-            <div class="avatar-form">
-              <label class="avatar-field">服装
-                <select id="wizard-clothes-type"><option value="sportswear">运动服</option><option value="hoodie">连帽衫</option><option value="tshirt">T 恤</option><option value="basketball">篮球服</option><option value="tennis">网球服</option><option value="yoga">瑜伽服</option></select>
-              </label>
-              <label class="avatar-field">服装颜色<input type="color" id="wizard-clothes-color" value="#ff6b4a" /></label>
-            </div>
-          </div>
-          <div id="wizard-step-6" class="wizard-step" hidden>
-            <div class="avatar-form">
-              <label class="avatar-field">帽子<select id="wizard-acc-hat"><option value="none">无</option><option value="sport-cap">运动帽</option></select></label>
-              <label class="avatar-field">围巾<select id="wizard-acc-scarf"><option value="none">无</option><option value="light">轻围巾</option></select></label>
-              <label class="avatar-field">眼镜<select id="wizard-acc-glasses"><option value="none">无</option><option value="round">圆框</option></select></label>
-              <label class="avatar-field">发带<select id="wizard-acc-headband"><option value="none">无</option><option value="sport">运动发带</option></select></label>
-              <label class="avatar-field">耳机<select id="wizard-acc-headphones"><option value="none">无</option><option value="sport">运动耳机</option></select></label>
-              <label class="avatar-field">背包<select id="wizard-acc-backpack"><option value="none">无</option><option value="mini">迷你背包</option></select></label>
-              <label class="avatar-field">护腕<select id="wizard-acc-wristband"><option value="none">无</option><option value="pair">一对</option></select></label>
-            </div>
-          </div>
-          <div id="wizard-step-7" class="wizard-step" hidden>
-            <label class="avatar-field">
-              性格
-              <select id="wizard-personality">
-                <option value="warm">温暖鼓励</option>
-                <option value="strict">严格教练</option>
-                <option value="funny">搞笑</option>
-                <option value="energetic">活泼</option>
-                <option value="steady">沉稳</option>
-                <option value="genki">元气</option>
-                <option value="tsundere">傲娇</option>
-                <option value="quiet">安静</option>
-              </select>
-            </label>
-          </div>
-          <div id="wizard-step-8" class="wizard-step" hidden>
-            <label class="avatar-field">
-              声音（预留）
-              <select id="wizard-voice-style">
-                <option value="reserved">预留（后续接 TTS/Voice Clone）</option>
-                <option value="warm">温暖</option>
-                <option value="coach">教练</option>
-              </select>
-            </label>
-          </div>
-
-          <p id="photo-status" style="font-size:0.8rem;color:#8b9cb3;margin-top:8px">等待创建角色</p>
-          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-            <button class="btn btn--secondary btn--sm" id="btn-wizard-prev" type="button">上一步</button>
-            <button class="btn btn--secondary btn--sm" id="btn-wizard-next" type="button">下一步</button>
-            <button class="btn btn--primary btn--sm" id="btn-generate-animate" type="button">创建并保存角色</button>
-            <button class="btn btn--secondary btn--sm" id="btn-clear-animate" type="button">重置</button>
-          </div>
-          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn--secondary btn--sm" type="button" data-preset="tiaotiao">跳跳</button>
-            <button class="btn btn--secondary btn--sm" type="button" data-preset="paopao">泡泡</button>
-            <button class="btn btn--secondary btn--sm" type="button" data-preset="shandian">闪电</button>
-            <button class="btn btn--secondary btn--sm" type="button" data-preset="naitang">奶糖</button>
-            <button class="btn btn--secondary btn--sm" type="button" data-preset="duole">多乐</button>
-            <button class="btn btn--secondary btn--sm" type="button" data-preset="coco">Coco</button>
-          </div>
-          </details>
+          <p id="character-select-status" style="font-size:0.8rem;color:#8b9cb3;margin-top:8px">尚未选择伙伴</p>
         </article>
 
         <div class="profile-data-compact">
@@ -575,7 +440,7 @@
         </div>
 
         <div class="train-visual__pane">
-          <span class="train-visual__label train-visual__label--partner">小伙伴 · <span data-avatar-name>跳跳</span></span>
+          <span class="train-visual__label train-visual__label--partner">人形伙伴 · <span data-avatar-name>小跃</span></span>
           <div class="train-visual__viewport">
             <div class="train-visual__partner-bg"></div>
             <div id="avatar-stage"></div>
@@ -687,14 +552,13 @@
   </div>
 
   <script src="character-profile.js"></script>
-  <script src="promptBuilder.js"></script>
   <script src="pose-engine.js"></script>
   <script src="camera-api.js"></script>
-  <script src="avatar-skeleton.js"></script>
+  <script src="avatar-skeleton.js?v=20260712-3"></script>
   <script src="camera.js"></script>
-  <script src="avatar.js"></script>
+  <script src="avatar.js?v=20260712-3"></script>
   <script src="agent.js"></script>
-  <script src="train.js"></script>
-  <script src="app.js"></script>
+  <script src="train.js?v=20260712-3"></script>
+  <script src="app.js?v=20260712-3"></script>
 </body>
 </html>

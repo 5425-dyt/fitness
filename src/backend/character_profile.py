@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict, List
-import hashlib
 import json
 import random
 import time
@@ -15,6 +14,8 @@ CURRENT_CHARACTER_FILE = "current_character.json"
 def _default_character() -> Dict[str, Any]:
     return {
         "id": "",
+        "name": "",
+        "presetKey": "",
         "species": "bunny",
         "style": "cute",
         "colors": {
@@ -122,54 +123,6 @@ def merge_character_config(raw: Dict[str, Any]) -> Dict[str, Any]:
             merged[section] = {**base[section], **val}
     merged["identityLock"] = True
     return merged
-
-
-def build_scene_prompt(scene_payload: Dict[str, Any]) -> str:
-    return (
-        f"Scene: {scene_payload.get('scene') or 'fitness studio'}\n"
-        f"Action: {scene_payload.get('action') or 'neutral standing pose'}\n"
-        f"Lighting: {scene_payload.get('lighting') or 'soft natural light'}\n"
-        f"Camera: {scene_payload.get('camera') or 'eye-level medium shot'}\n"
-        f"Mood: {scene_payload.get('mood') or 'positive'}\n"
-        f"Outfit: {scene_payload.get('outfit') or 'sportswear'}"
-    )
-
-
-def build_generation_payload(character: Dict[str, Any], scene_prompt: str) -> Dict[str, Any]:
-    return {
-        "identity_id": character["id"],
-        "identity_lock": True,
-        "seed": int(character.get("seed") or 42),
-        "character_config": character,
-        "scene_prompt": scene_prompt,
-        "model_features": {
-            "characterReference": True,
-            "faceReference": True,
-            "ipAdapter": True,
-            "consistentCharacter": True,
-            "referenceImageWeight": True,
-            "faceLock": True,
-            "identityEmbedding": True,
-            "lora": True,
-            "dreamBooth": False,
-        },
-    }
-
-
-def build_final_prompt(character: Dict[str, Any], scene_prompt: str) -> str:
-    return (
-        "Create one stylized 3D avatar image based on this fixed Character Config.\n"
-        "Do NOT change species/body/face identity.\n\n"
-        f"Character Config:\n{json.dumps(character, ensure_ascii=False, indent=2)}\n\n"
-        f"{scene_prompt}\n"
-    )
-
-
-def evaluate_identity_similarity(character: Dict[str, Any], scene_prompt: str, attempt: int) -> float:
-    key = f"{character.get('id')}|{scene_prompt}|{attempt}".encode("utf-8")
-    digest = hashlib.sha1(key).hexdigest()
-    raw = int(digest[:6], 16) % 700
-    return round(94.0 + (raw / 1000.0) * 6.0, 2)
 
 
 class CharacterConfigStore:

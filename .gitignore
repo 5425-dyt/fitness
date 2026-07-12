@@ -33,3 +33,7 @@ out/
 # Temporary files
 *.tmp
 *.swp
+
+# Runtime uploads (keep the folder, ignore generated artifacts)
+src/uploads/*
+!src/uploads/.gitkeep
